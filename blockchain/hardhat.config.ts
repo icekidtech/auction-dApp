@@ -1,7 +1,12 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
-import "@nomicfoundation/hardhat-ignition-ethers";
+import "@nomicfoundation/hardhat-chai-matchers";
 import "dotenv/config";
+
+// Read environment variables
+const PRIVATE_KEY = process.env.PRIVATE_KEY || "0x0000000000000000000000000000000000000000000000000000000000000000";
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
+const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -14,15 +19,30 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    hardhat: {},
-    development: {
-      url: "http://localhost:8545",
-      accounts: 
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    // Local network for development
+    hardhat: {
+      chainId: 31337
+    },
+    // Lisk testnet configurations for deployment
+    // This is a placeholder and would need to be replaced with actual Lisk network settings
+    lisk_testnet: {
+      url: `https://testnet.lisk.com`,
+      accounts: [PRIVATE_KEY],
+      chainId: 10000 // placeholder
     }
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: ETHERSCAN_API_KEY
+  },
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
+  },
+  typechain: {
+    outDir: "typechain-types",
+    target: "ethers-v5"
   }
 };
 

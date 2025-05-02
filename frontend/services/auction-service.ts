@@ -46,7 +46,7 @@ export class AuctionService {
     bidderAddress: string
   ) {
     try {
-      await adapter.placeBid(auctionId, bidAmount, bidderAddress);
+      await adapter.placeBid(parseInt(auctionId), bidAmount, bidderAddress);
       return { success: true };
     } catch (error) {
       console.error('Error placing bid:', error);
@@ -59,8 +59,8 @@ export class AuctionService {
    */
   static async getAuction(auctionId: string) {
     try {
-      const auction = await adapter.getAuction(auctionId);
-      const bidHistory = await adapter.getBidHistory(auctionId);
+      const auction = await adapter.getAuction(parseInt(auctionId));
+      const bidHistory = await adapter.getBidHistory(parseInt(auctionId));
       
       return {
         ...auction,
@@ -77,7 +77,7 @@ export class AuctionService {
    */
   static async finalizeAuction(auctionId: string, requesterAddress: string) {
     try {
-      await adapter.finalizeAuction(auctionId, requesterAddress);
+      await adapter.finalizeAuction(parseInt(auctionId), requesterAddress);
       return { success: true };
     } catch (error) {
       console.error('Error finalizing auction:', error);
@@ -90,31 +90,40 @@ export class AuctionService {
    */
   static async getDashboardAuctions(userAddress: string) {
     try {
-      // Get created auctions
+      // Get auctions created by user
       const createdAuctionIds = await adapter.getAuctionsByCreator(userAddress);
       const createdAuctions = await Promise.all(
-        createdAuctionIds.map(id => this.getAuction(id))
+        createdAuctionIds.map(async (id) => {
+          const auction = await adapter.getAuction(id);
+          return auction;
+        })
       );
       
-      // Get auctions with active bids
-      const biddedAuctionIds = await adapter.getAuctionsByBidder(userAddress);
-      const biddedAuctions = await Promise.all(
-        biddedAuctionIds.map(id => this.getAuction(id))
+      // Get auctions where user has bids
+      const biddingAuctionIds = await adapter.getAuctionsByBidder(userAddress);
+      const biddingAuctions = await Promise.all(
+        biddingAuctionIds.map(async (id) => {
+          const auction = await adapter.getAuction(id);
+          return auction;
+        })
       );
       
-      // Get won auctions
+      // Get auctions won by user
       const wonAuctionIds = await adapter.getAuctionsByWinner(userAddress);
       const wonAuctions = await Promise.all(
-        wonAuctionIds.map(id => this.getAuction(id))
+        wonAuctionIds.map(async (id) => {
+          const auction = await adapter.getAuction(id);
+          return auction;
+        })
       );
       
       return {
         created: createdAuctions,
-        active: biddedAuctions.filter(auction => auction.isActive),
+        bidding: biddingAuctions,
         won: wonAuctions
       };
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error('Error fetching dashboard auctions:', error);
       throw error;
     }
   }
