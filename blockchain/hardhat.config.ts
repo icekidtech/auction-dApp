@@ -1,6 +1,7 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-chai-matchers";
+import "@nomicfoundation/hardhat-ignition";
 import "dotenv/config";
 
 // Read environment variables
@@ -19,12 +20,9 @@ const config: HardhatUserConfig = {
     }
   },
   networks: {
-    // Local network for development
     hardhat: {
       chainId: 31337
     },
-    // Lisk testnet configurations for deployment
-    // This is a placeholder and would need to be replaced with actual Lisk network settings
     lisk_testnet: {
       url: `https://testnet.lisk.com`,
       accounts: [PRIVATE_KEY],

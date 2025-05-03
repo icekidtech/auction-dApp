@@ -1,4 +1,4 @@
-import { LiskBridgeAdapter } from '../../blockchain/scripts/lisk-adapter';
+import { LiskBridgeAdapter } from '../../blockchain/ignition/modules/lisk-adapter';
 
 // Initialize the adapter with deployment details
 const adapter = new LiskBridgeAdapter(
@@ -93,7 +93,7 @@ export class AuctionService {
       // Get auctions created by user
       const createdAuctionIds = await adapter.getAuctionsByCreator(userAddress);
       const createdAuctions = await Promise.all(
-        createdAuctionIds.map(async (id) => {
+        createdAuctionIds.map(async (id: number) => {
           const auction = await adapter.getAuction(id);
           return auction;
         })
@@ -102,7 +102,7 @@ export class AuctionService {
       // Get auctions where user has bids
       const biddingAuctionIds = await adapter.getAuctionsByBidder(userAddress);
       const biddingAuctions = await Promise.all(
-        biddingAuctionIds.map(async (id) => {
+        biddingAuctionIds.map(async (id: number) => {
           const auction = await adapter.getAuction(id);
           return auction;
         })
@@ -111,7 +111,7 @@ export class AuctionService {
       // Get auctions won by user
       const wonAuctionIds = await adapter.getAuctionsByWinner(userAddress);
       const wonAuctions = await Promise.all(
-        wonAuctionIds.map(async (id) => {
+        wonAuctionIds.map(async (id: number) => {
           const auction = await adapter.getAuction(id);
           return auction;
         })

@@ -1,4 +1,4 @@
-import { LiskBridgeAdapter } from '../../blockchain/scripts/lisk-adapter';
+import { LiskBridgeAdapter } from '../../blockchain/ignition/modules/lisk-adapter';
 
 /**
  * Helper class for Lisk authentication in the frontend
