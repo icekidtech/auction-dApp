@@ -191,7 +191,17 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
     /**
      * @dev Get auction details
      * @param auctionId ID of the auction
-     * @return Auction details
+     * @return id The auction's unique identifier
+     * @return itemName Name of the item being auctioned
+     * @return itemImageUrl URL or IPFS hash of the item image
+     * @return creatorAddress Lisk address of the auction creator
+     * @return startingBid Initial bid amount for the auction
+     * @return currentHighestBid Current highest bid on the auction
+     * @return highestBidder Lisk address of the current highest bidder
+     * @return createdTimestamp Time when the auction was created (Unix timestamp)
+     * @return endTimestamp Time when the auction ends (Unix timestamp)
+     * @return isActive Whether the auction is currently active
+     * @return isCompleted Whether the auction has been completed
      */
     function getAuction(uint256 auctionId) external view returns (
         uint256 id,
@@ -350,5 +360,13 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
      */
     function stringEquals(string memory a, string memory b) private pure returns (bool) {
         return keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b));
+    }
+
+    /**
+     * @return isActive Whether the auction is still accepting bids
+     * @return highestBid The current highest bid amount
+     */
+    function getAuctionStatus() public view returns (bool isActive, uint256 highestBid) {
+        // ...
     }
 }
