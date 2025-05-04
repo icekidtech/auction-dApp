@@ -14,27 +14,30 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
     
     Counters.Counter private _auctionIds;
     
-    // Struct to store bid information
+    // Mapping to store string hashes
+    mapping(bytes32 => bool) private stringHashes;
+
+    // Struct to store bid information - kept for event structure reference
     struct Bid {
         string bidderAddress;       // Lisk address string
         uint256 amount;
         uint256 timestamp;
     }
     
-    // Struct to store auction data
+    // Struct to store auction data - removed bidHistory array
     struct Auction {
         uint256 id;
         string itemName;
         string itemImageUrl;
-        string creatorLiskAddress;  // Lisk address string
+        string creatorAddress;      // Lisk address string (standardized naming)
         uint256 startingBid;
         uint256 currentHighestBid;
-        string highestBidder;   // Lisk address string
+        string highestBidder;       // Lisk address string
         uint256 createdTimestamp;
         uint256 endTimestamp;
         bool isActive;
         bool isCompleted;
-        Bid[] bidHistory;
+        // Bid history removed - will be tracked via events
     }
     
     // Mapping from auction ID to Auction
@@ -55,11 +58,13 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         uint256 endTimestamp
     );
     
+    // Enhanced BidPlaced event with all necessary bid information
     event BidPlaced(
         uint256 indexed auctionId,
-        string bidder,
+        string bidderAddress,
         uint256 amount,
-        uint256 timestamp
+        uint256 timestamp,
+        bool isHighestBid
     );
     
     event AuctionCompleted(
@@ -81,10 +86,10 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         string memory itemImageUrl,
         uint256 startingBid,
         uint256 duration,
-        string memory creatorLiskAddress
+        string memory creatorAddress
     ) external {
         require(bytes(itemName).length > 0, "Item name cannot be empty");
-        require(bytes(creatorLiskAddress).length > 0, "Creator address cannot be empty");
+        require(bytes(creatorAddress).length > 0, "Creator address cannot be empty");
         require(startingBid > 0, "Starting bid must be greater than zero");
         require(duration > 0, "Duration must be greater than zero");
         
@@ -96,19 +101,19 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
             id: newAuctionId,
             itemName: itemName,
             itemImageUrl: itemImageUrl,
-            creatorLiskAddress: creatorLiskAddress,
+            creatorAddress: creatorAddress,
             startingBid: startingBid,
             currentHighestBid: startingBid,
             highestBidder: "", // Explicitly initialized to an empty string
             createdTimestamp: currentTime,
             endTimestamp: currentTime + duration,
             isActive: true,
-            isCompleted: false,
-            bidHistory: new Bid[](0)
+            isCompleted: false
+            // No bidHistory initialization needed
         });
         
         // Update mapping for creator address
-        creatorToAuctions[creatorLiskAddress].push(newAuctionId);
+        creatorToAuctions[creatorAddress].push(newAuctionId);
 
         emit AuctionCreated(
             newAuctionId,
@@ -134,29 +139,22 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         
         require(auction.id != 0, "Auction does not exist");
         require(auction.isActive, "Auction is not active");
-        require(!stringExists(bidderAddress), "Creator cannot bid on own auction");
         require(bidAmount > auction.currentHighestBid, "Bid amount must be greater than current highest bid");
         require(bytes(bidderAddress).length > 0, "Bidder address cannot be empty");
         require(!stringEquals(bidderAddress, auction.creatorAddress), "Creator cannot bid on own auction");
-        require(bytes(bidderAddress).length > 0, "Bidder address cannot be empty");
         
-        // Create new bid
-        Bid memory newBid = Bid({
-            bidderAddress: bidderAddress,
-            amount: bidAmount,
-            timestamp: block.timestamp
-        });
-        
-        // Update auction
+        // No need to store bid history in contract storage
+        // Just update the current highest bid
         auction.currentHighestBid = bidAmount;
         auction.highestBidder = bidderAddress;
-        auction.bidHistory.push(newBid);
         
+        // Emit event for off-chain indexing - enhanced with isHighestBid flag
         emit BidPlaced(
             auctionId,
             bidderAddress,
             bidAmount,
-            block.timestamp
+            block.timestamp,
+            true // This is the highest bid at this point
         );
     }
     
@@ -175,7 +173,7 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         require(!auction.isCompleted, "Auction already completed");
         require(
             block.timestamp >= auction.endTimestamp || 
-            stringEquals(requesterAddress, auction.creatorLiskAddress),
+            stringEquals(requesterAddress, auction.creatorAddress),
             "Auction still active or unauthorized"
         );
         
@@ -250,68 +248,12 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Get bid history for an auction
-     * @param auctionId ID of the auction
-     * @return Array of bids
-     */
-    function getBidHistory(uint256 auctionId) public view returns (Bid[] memory) {
-        Auction storage auction = auctions[auctionId];
-        require(auction.id != 0, "Auction does not exist");
-        
-        return auction.bidHistory;
-    }
-    
-    /**
      * @dev Get auctions created by an address
      * @param creatorAddress Creator's Lisk address
      * @return Array of auction IDs
      */
     function getAuctionsByCreator(string memory creatorAddress) external view returns (uint256[] memory) {
-        uint256 count = 0;
-        
-        // Count auctions by creator
-        for (uint256 i = 1; i <= _auctionIds.current(); i++) {
-            if (stringEquals(auctions[i].creatorLiskAddress, creatorLiskAddress)) {
-                count++;
-            }
-        }
-        
-        // Create result array
         return creatorToAuctions[creatorAddress];
-        // Count auctions with bids by bidder
-        for (uint256 i = 1; i <= _auctionIds.current(); i++) {
-            bool hasBid = false;
-            for (uint256 j = 0; j < auctions[i].bidHistory.length; j++) {
-                if (stringEquals(auctions[i].bidHistory[j].bidderAddress, bidderAddress)) {
-                    hasBid = true;
-                    break;
-                }
-            }
-            if (hasBid) {
-                count++;
-            }
-        }
-        
-        // Create result array
-        uint256[] memory result = new uint256[](count);
-        uint256 index = 0;
-        
-        // Populate result array
-        for (uint256 i = 1; i <= _auctionIds.current(); i++) {
-            bool hasBid = false;
-            for (uint256 j = 0; j < auctions[i].bidHistory.length; j++) {
-                if (stringEquals(auctions[i].bidHistory[j].bidder, bidderAddress)) {
-                    hasBid = true;
-                    break;
-                }
-            }
-            if (hasBid) {
-                result[index] = auctions[i].id;
-                index++;
-            }
-        }
-        
-        return result;
     }
     
     /**
@@ -354,8 +296,9 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
     /**
      * @dev Utility function to check if a string hash exists
      * @param str String to check
-     * @return Boolean indicating if the string hash exists
+     * @return exists Boolean indicating if the string hash exists
      */
-    function stringExists(string memory str) private view returns (bool) {
+    function stringExists(string memory str) private view returns (bool exists) {
         return stringHashes[keccak256(abi.encodePacked(str))];
     }
+}
