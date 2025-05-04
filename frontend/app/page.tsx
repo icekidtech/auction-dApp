@@ -90,7 +90,7 @@ export default function Home() {
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                 Decentralized Auctions
               </span>{" "}
-              on the Lisk Blockchain
+              on the Zenthra Platform
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
               Discover, bid, and sell unique digital assets in a secure and transparent marketplace powered by

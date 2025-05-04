@@ -62,7 +62,7 @@ export default function CreateAuctionPage() {
             Create New Auction
           </h1>
           <p className="text-muted-foreground">
-            Fill in the details below to list your item for auction on the Lisk blockchain.
+            Fill in the details below to list your item for auction on the Zenthra platform.
           </p>
         </motion.div>
 

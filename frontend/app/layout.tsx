@@ -16,9 +16,9 @@ const syne = Syne({
 })
 
 export const metadata: Metadata = {
-  title: "Lisk Auction Platform",
+  title: "Zenthra",
   description: "Decentralized auction platform built on the Lisk blockchain",
-    generator: 'v0.dev'
+  generator: 'v0.dev'
 }
 
 export default function RootLayout({

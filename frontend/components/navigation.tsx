@@ -35,10 +35,10 @@ export function Navigation() {
           <div className="flex items-center gap-2">
             <Link href="/" className="flex items-center gap-2">
               <div className="relative w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="font-display text-xl font-bold text-white">L</span>
+                <span className="font-display text-xl font-bold text-white">Z</span>
               </div>
               <span className="font-display text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-pink-500">
-                LiskAuction
+                Zenthra
               </span>
             </Link>
           </div>
