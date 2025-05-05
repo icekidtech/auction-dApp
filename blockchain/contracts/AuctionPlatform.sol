@@ -17,6 +17,9 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
     // Mapping to store string hashes
     mapping(bytes32 => bool) private stringHashes;
 
+    // New mapping needed
+    mapping(string => uint256[]) private bidderToAuctions;
+
     // Struct to store bid information - kept for event structure reference
     struct Bid {
         string bidderAddress;       // Lisk address string
@@ -139,6 +142,7 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         
         require(auction.id != 0, "Auction does not exist");
         require(auction.isActive, "Auction is not active");
+        require(block.timestamp < auction.endTimestamp, "Auction has ended");
         require(bidAmount > auction.currentHighestBid, "Bid amount must be greater than current highest bid");
         require(bytes(bidderAddress).length > 0, "Bidder address cannot be empty");
         require(!stringEquals(bidderAddress, auction.creatorAddress), "Creator cannot bid on own auction");
@@ -147,6 +151,9 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         // Just update the current highest bid
         auction.currentHighestBid = bidAmount;
         auction.highestBidder = bidderAddress;
+
+        // Update mapping for bidder address
+        bidderToAuctions[bidderAddress].push(auctionId);
         
         // Emit event for off-chain indexing - enhanced with isHighestBid flag
         emit BidPlaced(
@@ -263,6 +270,15 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
      */
     function getAuctionsByWinner(string memory winnerAddress) external view returns (uint256[] memory) {
         return winnerToAuctions[winnerAddress];
+    }
+
+    /**
+     * @dev Get auctions bid on by an address
+     * @param bidderAddress Bidder's Lisk address
+     * @return Array of auction IDs
+     */
+    function getAuctionsByBidder(string memory bidderAddress) external view returns (uint256[] memory) {
+        return bidderToAuctions[bidderAddress];
     }
     
     /**
