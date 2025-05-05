@@ -61,13 +61,12 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         uint256 endTimestamp
     );
     
-    // Enhanced BidPlaced event with all necessary bid information
+    // Updated BidPlaced event without isHighestBid parameter
     event BidPlaced(
         uint256 indexed auctionId,
         string bidderAddress,
         uint256 amount,
-        uint256 timestamp,
-        bool isHighestBid
+        uint256 timestamp
     );
     
     event AuctionCompleted(
@@ -155,13 +154,12 @@ contract AuctionPlatform is Ownable, ReentrancyGuard {
         // Update mapping for bidder address
         bidderToAuctions[bidderAddress].push(auctionId);
         
-        // Emit event for off-chain indexing - enhanced with isHighestBid flag
+        // Emit event for off-chain indexing - updated without isHighestBid flag
         emit BidPlaced(
             auctionId,
             bidderAddress,
             bidAmount,
-            block.timestamp,
-            true // This is the highest bid at this point
+            block.timestamp
         );
     }
     
