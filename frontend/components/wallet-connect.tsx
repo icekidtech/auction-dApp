@@ -21,7 +21,7 @@ const walletOptions = [
   {
     id: "metamask",
     name: "MetaMask",
-    logo: "/images/metamask-logo.png",
+    logo: "/images/metamask-logo.png", 
   },
   {
     id: "walletconnect",
@@ -32,24 +32,33 @@ const walletOptions = [
 
 export function WalletConnect() {
   const [isOpen, setIsOpen] = useState(false);
-  const { connect, address, isConnected } = useWallet();
+  const { connect, address, isConnected, disconnect } = useWallet();
 
   const handleConnect = async (walletId: string) => {
-    await connect(walletId);
-    setIsOpen(false);
+    try {
+      await connect(walletId);
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Failed to connect:", error);
+      // You could show an error message here
+    }
   };
 
   return (
     <>
-      <Button 
-        onClick={() => setIsOpen(true)}
-        variant={isConnected ? "outline" : "default"}
-        className={isConnected ? "bg-green-50 text-green-900 hover:bg-green-100 border-green-300" : ""}
-      >
-        {isConnected 
-          ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` 
-          : "Connect Wallet"}
-      </Button>
+      {isConnected ? (
+        <Button 
+          onClick={disconnect}
+          variant="outline"
+          className="bg-green-50 text-green-900 hover:bg-green-100 border-green-300"
+        >
+          {`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
+        </Button>
+      ) : (
+        <Button onClick={() => setIsOpen(true)}>
+          Connect Wallet
+        </Button>
+      )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-md">
