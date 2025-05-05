@@ -3,6 +3,12 @@ import { ethers } from "hardhat";
 import { Contract } from "ethers";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { AuctionPlatform } from "../typechain-types";
+
+// Create a type that extends AuctionPlatform with an index signature
+type AuctionPlatformContract = AuctionPlatform & {
+  [key: string]: any;
+};
 
 describe("AuctionPlatform", function() {
   let auctionPlatform: Contract;
@@ -24,13 +30,15 @@ describe("AuctionPlatform", function() {
     owner = signers[0];
     
     const AuctionPlatform = await ethers.getContractFactory("AuctionPlatform");
-    auctionPlatform = await AuctionPlatform.deploy();
+    auctionPlatform = (await AuctionPlatform.deploy()) as AuctionPlatformContract;
     await auctionPlatform.waitForDeployment();
   });
   
   describe("Auction Creation", function() {
     it("Should create a new auction", async function() {
-      await expect(auctionPlatform.createAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.createAuction(
         auctionData.itemName,
         auctionData.itemImageUrl,
         auctionData.startingBid,
@@ -43,10 +51,10 @@ describe("AuctionPlatform", function() {
           auctionData.itemName, 
           auctionData.startingBid, 
           // Ignore the timestamp
-          (value: any) => typeof value === "number"
+          (value: any) => typeof value === "number" || typeof value === "bigint"
         );
       
-      const auction = await auctionPlatform.getAuction(1);
+      const auction = await typedContract.getAuction(1);
       expect(auction.itemName).to.equal(auctionData.itemName);
       expect(auction.creatorAddress).to.equal(mockLiskAddress1);
       expect(auction.startingBid).to.equal(auctionData.startingBid);
@@ -54,7 +62,9 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should not create an auction with empty item name", async function() {
-      await expect(auctionPlatform.createAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.createAuction(
         "",
         auctionData.itemImageUrl,
         auctionData.startingBid,
@@ -64,7 +74,9 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should not create an auction with zero starting bid", async function() {
-      await expect(auctionPlatform.createAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.createAuction(
         auctionData.itemName,
         auctionData.itemImageUrl,
         0,
@@ -76,7 +88,9 @@ describe("AuctionPlatform", function() {
   
   describe("Bidding", function() {
     beforeEach(async function() {
-      await auctionPlatform.createAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await typedContract.createAuction(
         auctionData.itemName,
         auctionData.itemImageUrl,
         auctionData.startingBid,
@@ -86,9 +100,10 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should place a bid", async function() {
+      const typedContract = auctionPlatform as AuctionPlatformContract;
       const bidAmount = ethers.parseUnits("150", 8);
       
-      await expect(auctionPlatform.placeBid(
+      await expect(typedContract.placeBid(
         1,
         bidAmount,
         mockLiskAddress2
@@ -98,22 +113,24 @@ describe("AuctionPlatform", function() {
           mockLiskAddress2, 
           bidAmount, 
           // Ignore the timestamp
-          (value: any) => typeof value === "number"
+          (value: any) => typeof value === "number" || typeof value === "bigint"
         );
       
-      const auction = await auctionPlatform.getAuction(1);
+      const auction = await typedContract.getAuction(1);
       expect(auction.currentHighestBid).to.equal(bidAmount);
       expect(auction.highestBidder).to.equal(mockLiskAddress2);
     });
     
     it("Should not allow bids below the current highest bid", async function() {
-      await auctionPlatform.placeBid(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await typedContract.placeBid(
         1,
         ethers.parseUnits("150", 8),
         mockLiskAddress2
       );
       
-      await expect(auctionPlatform.placeBid(
+      await expect(typedContract.placeBid(
         1,
         ethers.parseUnits("120", 8),
         "lsk8f92h3f98h2f98h2f98h2f98h2f98h2f98h2f9"
@@ -121,7 +138,9 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should not allow creator to bid on own auction", async function() {
-      await expect(auctionPlatform.placeBid(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.placeBid(
         1,
         ethers.parseUnits("150", 8),
         mockLiskAddress1
@@ -129,10 +148,12 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should not allow bids on expired auctions", async function() {
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
       // Fast forward time past the auction end
       await time.increase(auctionData.duration + 1);
       
-      await expect(auctionPlatform.placeBid(
+      await expect(typedContract.placeBid(
         1,
         ethers.parseUnits("150", 8),
         mockLiskAddress2
@@ -142,7 +163,9 @@ describe("AuctionPlatform", function() {
   
   describe("Auction Completion", function() {
     beforeEach(async function() {
-      await auctionPlatform.createAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await typedContract.createAuction(
         auctionData.itemName,
         auctionData.itemImageUrl,
         auctionData.startingBid,
@@ -150,7 +173,7 @@ describe("AuctionPlatform", function() {
         mockLiskAddress1
       );
       
-      await auctionPlatform.placeBid(
+      await typedContract.placeBid(
         1,
         ethers.parseUnits("150", 8),
         mockLiskAddress2
@@ -158,32 +181,38 @@ describe("AuctionPlatform", function() {
     });
     
     it("Should finalize an expired auction", async function() {
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
       await time.increase(auctionData.duration + 1);
       
-      await expect(auctionPlatform.finalizeAuction(
+      await expect(typedContract.finalizeAuction(
         1,
         mockLiskAddress2
       )).to.emit(auctionPlatform, "AuctionCompleted")
         .withArgs(1, mockLiskAddress2, ethers.parseUnits("150", 8));
       
-      const auction = await auctionPlatform.getAuction(1);
+      const auction = await typedContract.getAuction(1);
       expect(auction.isActive).to.equal(false);
       expect(auction.isCompleted).to.equal(true);
     });
     
     it("Should allow creator to finalize auction early", async function() {
-      await expect(auctionPlatform.finalizeAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.finalizeAuction(
         1,
         mockLiskAddress1
       )).to.emit(auctionPlatform, "AuctionCompleted");
       
-      const auction = await auctionPlatform.getAuction(1);
+      const auction = await typedContract.getAuction(1);
       expect(auction.isActive).to.equal(false);
       expect(auction.isCompleted).to.equal(true);
     });
     
     it("Should not allow non-creator to finalize active auction", async function() {
-      await expect(auctionPlatform.finalizeAuction(
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      await expect(typedContract.finalizeAuction(
         1,
         "lsk8f92h3f98h2f98h2f98h2f98h2f98h2f98h2f9"
       )).to.be.revertedWith("Auction still active or unauthorized");
@@ -192,8 +221,10 @@ describe("AuctionPlatform", function() {
   
   describe("Querying Auctions", function() {
     beforeEach(async function() {
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
       // Create auction 1 by mockLiskAddress1
-      await auctionPlatform.createAuction(
+      await typedContract.createAuction(
         "Auction 1",
         "https://example.com/image1.jpg",
         ethers.parseUnits("100", 8),
@@ -202,7 +233,7 @@ describe("AuctionPlatform", function() {
       );
       
       // Create auction 2 by mockLiskAddress2
-      await auctionPlatform.createAuction(
+      await typedContract.createAuction(
         "Auction 2",
         "https://example.com/image2.jpg",
         ethers.parseUnits("200", 8),
@@ -211,31 +242,45 @@ describe("AuctionPlatform", function() {
       );
       
       // Place bids
-      await auctionPlatform.placeBid(1, ethers.parseUnits("150", 8), mockLiskAddress2);
-      await auctionPlatform.placeBid(2, ethers.parseUnits("250", 8), mockLiskAddress1);
+      await typedContract.placeBid(1, ethers.parseUnits("150", 8), mockLiskAddress2);
+      await typedContract.placeBid(2, ethers.parseUnits("250", 8), mockLiskAddress1);
     });
     
     it("Should get auctions by creator", async function() {
-      const auctions = await auctionPlatform.getAuctionsByCreator(mockLiskAddress1);
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      const auctions = await typedContract.getAuctionsByCreator(mockLiskAddress1);
       expect(auctions.length).to.equal(1);
       expect(auctions[0]).to.equal(1);
     });
     
     it("Should get auctions by bidder", async function() {
-      const auctions = await auctionPlatform.getAuctionsByBidder(mockLiskAddress2);
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
+      const auctions = await typedContract.getAuctionsByBidder(mockLiskAddress2);
       expect(auctions.length).to.equal(1);
       expect(auctions[0]).to.equal(1);
     });
     
     it("Should get auctions by winner", async function() {
+      const typedContract = auctionPlatform as AuctionPlatformContract;
+
       // Finalize auctions
       await time.increase(3601);
-      await auctionPlatform.finalizeAuction(1, mockLiskAddress1);
-      await auctionPlatform.finalizeAuction(2, mockLiskAddress2);
+      await typedContract.finalizeAuction(1, mockLiskAddress1);
+      await typedContract.finalizeAuction(2, mockLiskAddress2);
       
-      const auctions = await auctionPlatform.getAuctionsByWinner(mockLiskAddress2);
+      const auctions = await typedContract.getAuctionsByWinner(mockLiskAddress2);
       expect(auctions.length).to.equal(1);
       expect(auctions[0]).to.equal(1);
+    });
+  });
+
+  describe("Example Usage", function() {
+    it("Should demonstrate example usage of createAuction and getAddress", async function() {
+      await auctionPlatform.createAuction("Item", "image.jpg", 100, 86400, "lisk-address");
+      const address = await auctionPlatform.getAddress();
+      expect(address).to.be.a("string");
     });
   });
 });
