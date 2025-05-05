@@ -1,9 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { Space_Grotesk, Syne } from "next/font/google"
+import localFont from "next/font/local"
 import "./globals.css"
+import { cn } from "@/lib/utils"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Navigation } from "@/components/navigation"
+import { WalletProvider } from "@/hooks/use-wallet"
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -18,7 +21,6 @@ const syne = Syne({
 export const metadata: Metadata = {
   title: "Zenthra",
   description: "Decentralized auction platform built on the Lisk blockchain",
-  generator: 'v0.dev'
 }
 
 export default function RootLayout({
@@ -28,13 +30,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${spaceGrotesk.variable} ${syne.variable} font-sans min-h-screen bg-background`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <div className="relative min-h-screen">
+      <body
+        className={cn(
+          "min-h-screen font-sans antialiased",
+          spaceGrotesk.variable,
+          syne.variable
+        )}
+      >
+        <WalletProvider>
+          <div className="flex min-h-screen flex-col">
             <Navigation />
-            <div className="pt-16">{children}</div>
+            <div className="flex-1">{children}</div>
           </div>
-        </ThemeProvider>
+        </WalletProvider>
       </body>
     </html>
   )
