@@ -23,10 +23,10 @@ const config: HardhatUserConfig = {
     hardhat: {
       chainId: 31337
     },
-    lisk_testnet: {
-      url: `https://testnet.lisk.com`,
+    "lisk-sepolia": {  // Add quotes around network name with hyphen
+      url: `https://rpc.sepolia-api.lisk.com`,
       accounts: [PRIVATE_KEY],
-      chainId: 10000 // placeholder
+      chainId: 4202 // placeholder
     }
   },
   etherscan: {
