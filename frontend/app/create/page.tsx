@@ -41,7 +41,7 @@ const formSchema = z.object({
 });
 
 export default function CreateAuctionPage() {
-  const { isConnected, connect, contract } = useWallet();
+  const { isConnected, connect, contract, isConnecting, address } = useWallet();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -60,8 +60,12 @@ export default function CreateAuctionPage() {
 
   // Try to connect wallet when page loads
   useEffect(() => {
-    if (!isConnected) {
+    // Only try to connect if not already connected
+    if (!isConnected && !isConnecting) {
+      console.log("Trying to connect wallet from create page");
       connect();
+    } else if (isConnected) {
+      console.log("Wallet already connected:", address);
     }
   }, [isConnected, connect]);
 
