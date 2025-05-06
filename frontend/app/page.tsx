@@ -119,6 +119,17 @@ export default function Home() {
     loading: statsLoading 
   } = useQuery(GET_STATS);
 
+  // In your page component:
+  const { data, loading, error } = useQuery(GET_AUCTIONS);
+
+  // Add these console logs:
+  console.log("GraphQL loading:", loading);
+  console.log("GraphQL error:", error);
+  console.log("GraphQL data:", data);
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
   // Process auction data to get current highest bids
   const processAuctionData = (auctions: Auction[], bids: Bid[]): ProcessedAuction[] => {
     if (!auctions || !bids) return [];
