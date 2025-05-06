@@ -10,6 +10,7 @@ import { Navigation } from "@/components/navigation";
 import { WalletProvider } from "@/hooks/use-wallet";
 import { ApolloProvider } from "@apollo/client";
 import { graphqlClient } from "@/lib/graphql-client";
+import { Toaster } from "@/components/toaster";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -47,6 +48,7 @@ export default function RootLayout({
               <Navigation />
               <div className="flex-1">{children}</div>
             </div>
+            <Toaster />
           </WalletProvider>
         </ApolloProvider>
       </body>
