@@ -5,6 +5,14 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
 import { Check, ChevronDown, Copy, ExternalLink, LogOut, Wallet } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -16,6 +24,7 @@ import { toast } from "@/components/ui/use-toast";
 export function WalletConnect() {
   const { address, isConnected, balance, connect, disconnect } = useWallet();
   const [copied, setCopied] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const copyAddress = () => {
     if (address) {
@@ -34,6 +43,11 @@ export function WalletConnect() {
       const explorerUrl = `https://explorer.sepolia.lisk.com/address/${address}`;
       window.open(explorerUrl, "_blank");
     }
+  };
+
+  const handleConnectOption = (walletType: string) => {
+    connect(walletType);
+    setDialogOpen(false);
   };
 
   if (isConnected && address) {
@@ -86,12 +100,46 @@ export function WalletConnect() {
   }
 
   return (
-    <Button 
-      onClick={() => !isConnected && connect()} // Only connect if not connected
-      className="flex items-center gap-2"
-    >
-      <Wallet className="h-4 w-4" />
-      <span className="hidden sm:inline-block">Connect Wallet</span>
-    </Button>
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <Wallet className="h-4 w-4" />
+          <span className="hidden sm:inline-block">Connect Wallet</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Connect Wallet</DialogTitle>
+          <DialogDescription>
+            Choose a wallet to connect to the Lisk Auction Platform
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <Button 
+            onClick={() => handleConnectOption("metamask")} 
+            className="flex items-center justify-center gap-2"
+          >
+            <img src="/metamask.svg" alt="MetaMask" className="w-6 h-6" />
+            <span>MetaMask</span>
+          </Button>
+          <Button 
+            onClick={() => handleConnectOption("liskwallet")} 
+            className="flex items-center justify-center gap-2"
+            variant="outline"
+          >
+            <img src="/lisk.svg" alt="Lisk Wallet" className="w-6 h-6" />
+            <span>Lisk Wallet</span>
+          </Button>
+          <Button 
+            onClick={() => handleConnectOption("walletconnect")} 
+            className="flex items-center justify-center gap-2"
+            variant="outline"
+          >
+            <img src="/walletconnect.svg" alt="WalletConnect" className="w-6 h-6" />
+            <span>WalletConnect</span>
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
