@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { ethers, providers, Contract } from "ethers";
 import { useToast } from "@/components/ui/use-toast";
+import ErrorManager from '@/utils/error-manager';
 
 // Add this ABI directly in your file
 const AuctionPlatformABI = [
@@ -176,8 +177,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           
           if (network.chainId !== CHAIN_ID) {
             const errorMessage = `Please switch to Lisk chain ID ${CHAIN_ID}`;
-            if (!shownErrors.has(errorMessage)) {
-              shownErrors.add(errorMessage);
+            if (ErrorManager.shouldShowError(errorMessage)) {
               toast({
                 variant: "destructive",
                 title: "Wrong Network",
