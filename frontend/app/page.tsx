@@ -148,7 +148,7 @@ export default function Home() {
       return {
         id: auction.auctionId,
         name: auction.itemName,
-        image: `/api/auction-image/${auction.auctionId}` || "/placeholder.svg?height=400&width=400",
+        image: `/api/auction-image/${auction.auctionId}`, 
         currentBid: currentBid,
         endTime: new Date(parseInt(auction.endTimestamp) * 1000),
         creatorAddress: auction.creatorAddress
