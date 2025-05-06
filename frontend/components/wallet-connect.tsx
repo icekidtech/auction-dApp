@@ -86,7 +86,10 @@ export function WalletConnect() {
   }
 
   return (
-    <Button onClick={() => connect()} className="flex items-center gap-2">
+    <Button 
+      onClick={() => !isConnected && connect()} // Only connect if not connected
+      className="flex items-center gap-2"
+    >
       <Wallet className="h-4 w-4" />
       <span className="hidden sm:inline-block">Connect Wallet</span>
     </Button>
