@@ -2,21 +2,21 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { LiskBridgeAdapter } from "../../blockchain/ignition/modules/lisk-adapter";
+import { ethers } from "ethers";
 
 interface WalletContextType {
+  address: string | null;
   isConnected: boolean;
-  address: string;
-  balance: string;
-  connect: (walletType: string) => Promise<void>;
+  connect: () => Promise<void>; // Make sure it returns a promise
   disconnect: () => void;
-  walletType: string | null;
+  contract: ethers.Contract | null; // Add this property
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState("0");
   const [walletType, setWalletType] = useState<string | null>(null);
 
@@ -188,7 +188,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
     }
     
-    setAddress("");
+    setAddress(null);
     setIsConnected(false);
     setBalance("0");
     setWalletType(null);
@@ -223,7 +223,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       balance, 
       connect, 
       disconnect,
-      walletType 
+      walletType,
+      contract: null // Placeholder for contract
     }}>
       {children}
     </WalletContext.Provider>
