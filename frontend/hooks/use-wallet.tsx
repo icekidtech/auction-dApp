@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { ethers, providers, Contract } from "ethers";
-import AuctionPlatform from "../artifacts/contracts/AuctionPlatform.sol/AuctionPlatform.json";
+import AuctionPlatform from "@/artifacts/contracts/AuctionPlatform.sol/AuctionPlatform.json";
 import { useToast } from "@/components/ui/use-toast";
 
 declare global {
