@@ -1,0 +1,30 @@
+specVersion: 0.0.5
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: AuctionPlatform
+    network: sepolia  # Goldsky properly supports Sepolia
+    source:
+      address: "0xBf8F0475C5328a0bdC78ad2682E97a7cdFFBee3C"
+      abi: AuctionPlatform
+      startBlock: 5000000  # Replace with the block your contract was deployed at
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - AuctionCreated
+        - BidPlaced
+        - AuctionCompleted
+      abis:
+        - name: AuctionPlatform
+          file: ../blockchain/artifacts/contracts/AuctionPlatform.sol/AuctionPlatform.json
+      eventHandlers:
+        - event: AuctionCreated(indexed uint256,string,string,uint256,uint256)
+          handler: handleAuctionCreated
+        - event: BidPlaced(indexed uint256,string,uint256,uint256)
+          handler: handleBidPlaced
+        - event: AuctionCompleted(indexed uint256,string,uint256)
+          handler: handleAuctionCompleted
+      file: ./src/auction-platform.ts
