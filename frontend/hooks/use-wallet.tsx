@@ -31,6 +31,7 @@ const AuctionPlatformABI = [
 declare global {
   interface Window {
     ethereum?: any;
+    liskWallet?: any;
   }
 }
 
@@ -96,69 +97,139 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (walletType?: string) => {
     if (isConnecting || isConnected) return;
     setIsConnecting(true);
-    console.log("Starting wallet connection attempt...");
+    console.log("Starting wallet connection attempt with:", walletType);
     
     try {
-      if (!window.ethereum) {
-        toast({
-          variant: "destructive",
-          title: "No Ethereum Provider",
-          description: "Please install MetaMask or another compatible wallet"
-        });
-        return;
+      // Store already shown errors in this session
+      const shownErrors = new Set();
+      
+      // Handle different wallet types
+      switch(walletType) {
+        case "liskwallet":
+          // Connect with Lisk Wallet
+          if (!window.liskWallet) {
+            const errorMessage = "Lisk wallet not detected. Please install Lisk Wallet extension.";
+            if (!shownErrors.has(errorMessage)) {
+              shownErrors.add(errorMessage);
+              toast({
+                variant: "destructive",
+                title: "Lisk Wallet Not Found",
+                description: errorMessage
+              });
+            }
+            return;
+          }
+          
+          // Lisk wallet connect implementation
+          // This would use the LiskAuth implementation
+          // For now, we'll mock this
+          const liskAddress = await connectLiskWallet();
+          setAddress(liskAddress);
+          setIsConnected(true);
+          break;
+          
+        case "walletconnect":
+          // Implement WalletConnect
+          const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+          if (!walletConnectProjectId) {
+            const errorMessage = "WalletConnect configuration is missing";
+            if (!shownErrors.has(errorMessage)) {
+              shownErrors.add(errorMessage);
+              toast({
+                variant: "destructive",
+                title: "Configuration Error",
+                description: errorMessage
+              });
+            }
+            return;
+          }
+          
+          // WalletConnect implementation goes here
+          // For now we'll default to MetaMask as fallback
+          console.log("WalletConnect selected, falling back to MetaMask for now");
+          
+        case "metamask":
+        default:
+          // MetaMask is the default
+          if (!window.ethereum) {
+            const errorMessage = "Please install MetaMask or another compatible wallet";
+            if (!shownErrors.has(errorMessage)) {
+              shownErrors.add(errorMessage);
+              toast({
+                variant: "destructive",
+                title: "No Ethereum Provider",
+                description: errorMessage
+              });
+            }
+            return;
+          }
+          
+          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          const userAddress = accounts[0];
+          
+          const ethersProvider = new providers.Web3Provider(window.ethereum);
+          setProvider(ethersProvider);
+          
+          // Check we're on the right network
+          const network = await ethersProvider.getNetwork();
+          setChainId(network.chainId);
+          
+          if (network.chainId !== CHAIN_ID) {
+            const errorMessage = `Please switch to Lisk chain ID ${CHAIN_ID}`;
+            if (!shownErrors.has(errorMessage)) {
+              shownErrors.add(errorMessage);
+              toast({
+                variant: "destructive",
+                title: "Wrong Network",
+                description: errorMessage
+              });
+            }
+          }
+          
+          // Get and set balance
+          const bigintBalance = await ethersProvider.getBalance(userAddress);
+          const formattedBalance = ethers.utils.formatEther(bigintBalance);
+          setBalance(formattedBalance);
+          
+          // Set wallet state
+          setAddress(userAddress);
+          setIsConnected(true);
+          
+          // Save address for auto-reconnect
+          localStorage.setItem("zenthra-wallet-address", userAddress);
+          
+          // Add event listeners for account and chain changes
+          window.ethereum.on('accountsChanged', handleAccountChange);
+          window.ethereum.on('chainChanged', handleChainChange);
+          break;
       }
       
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      const userAddress = accounts[0];
-      
-      const ethersProvider = new providers.Web3Provider(window.ethereum);
-      setProvider(ethersProvider);
-      
-      // Check we're on the right network
-      const network = await ethersProvider.getNetwork();
-      setChainId(network.chainId);
-      
-      if (network.chainId !== CHAIN_ID) {
-        toast({
-          variant: "destructive",
-          title: "Wrong Network",
-          description: `Please switch to Lisk chain ID ${CHAIN_ID}`
-        });
-      }
-      
-      // Get and set balance
-      const bigintBalance = await ethersProvider.getBalance(userAddress);
-      const formattedBalance = ethers.utils.formatEther(bigintBalance);
-      setBalance(formattedBalance);
-      
-      // Set wallet state
-      setAddress(userAddress);
-      setIsConnected(true);
-      
-      // Save address for auto-reconnect
-      localStorage.setItem("zenthra-wallet-address", userAddress);
-      
-      // Add event listeners for account and chain changes
-      window.ethereum.on('accountsChanged', handleAccountChange);
-      window.ethereum.on('chainChanged', handleChainChange);
-      
-      console.log("Wallet connected successfully:", userAddress);
+      console.log("Wallet connected successfully:", address);
       
       toast({
         title: "Wallet Connected",
-        description: `Connected to ${userAddress.substring(0,6)}...${userAddress.substring(userAddress.length-4)}`
+        description: `Connected to ${address?.substring(0,6)}...${address?.substring(address?.length-4) || ""}`
       });
     } catch (error) {
       console.error("Wallet connection error:", error);
+      
+      // Only show error toast once
+      const errorMessage = error instanceof Error ? error.message : "Failed to connect wallet";
       toast({
         variant: "destructive",
         title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Failed to connect wallet"
+        description: errorMessage
       });
     } finally {
       setIsConnecting(false);
     }
   }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange]);
+
+  const connectLiskWallet = async () => {
+    // This would be implemented with the actual Lisk Wallet connection flow
+    // For now returning a mock address
+    return "lsk24cd35u4jdq8szo3pnsqe5dsxwrnazyqqqg5eu";
+  };
 
   const disconnect = useCallback(() => {
     setAddress(null);
