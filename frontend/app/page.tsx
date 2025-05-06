@@ -155,6 +155,32 @@ export default function Home() {
       };
     });
   };
+
+  // Updated data processing function
+  const processAuctions = () => {
+    if (!data?.auctionCreateds) return [];
+    
+    return data.auctionCreateds.map((auction: any) => {
+      // Get highest bid for this auction
+      const bids = data.bidPlaceds.filter(
+        (bid: any) => bid.auctionId === auction.auctionId
+      );
+      
+      const highestBid = bids.length > 0
+        ? Math.max(...bids.map((bid: any) => parseInt(bid.amount)))
+        : parseInt(auction.startingBid);
+      
+      return {
+        id: auction.auctionId,
+        name: auction.itemName,
+        // Use API route for images instead of direct GraphQL field
+        image: `/api/auction-image/${auction.auctionId}`, 
+        currentBid: highestBid / 1e8, // Assuming 8 decimals for LSK
+        endTime: new Date(parseInt(auction.endTimestamp) * 1000),
+        creatorAddress: auction.creatorAddress,
+      };
+    });
+  };
   
   // Process featured auctions
   const featuredAuctions = featuredData?.auctionCreateds 
