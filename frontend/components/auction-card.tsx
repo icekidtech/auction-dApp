@@ -1,75 +1,139 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import Link from "next/link"
-import { CountdownTimer } from "@/components/countdown-timer"
-import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface AuctionCardProps {
-  id: string
-  name: string
-  image: string
-  currentBid: number
-  endTime: Date
-  featured?: boolean
-  index?: number
+  id: string;
+  name: string;
+  image: string;
+  currentBid: number;
+  endTime: Date;
+  featured?: boolean;
+  index?: number;
+  creatorAddress?: string;
 }
 
-export function AuctionCard({ id, name, image, currentBid, endTime, featured, index = 0 }: AuctionCardProps) {
+export function AuctionCard({ 
+  id, 
+  name, 
+  image, 
+  currentBid, 
+  endTime, 
+  featured, 
+  index = 0,
+  creatorAddress
+}: AuctionCardProps) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    expired: boolean;
+  }>({
+    days: 0,
+    hours: 0, 
+    minutes: 0,
+    seconds: 0,
+    expired: false
+  });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = endTime.getTime() - new Date().getTime();
+      
+      if (difference <= 0) {
+        return {
+          days: 0,
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          expired: true
+        };
+      }
+      
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000),
+        expired: false
+      };
+    };
+    
+    // Set initial time left
+    setTimeLeft(calculateTimeLeft());
+    
+    // Update timer every second
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(timer);
+  }, [endTime]);
+
   return (
     <Link href={`/auction/${id}`}>
-      <motion.div
-        className={cn(
-          "group relative overflow-hidden rounded-xl transition-all duration-300",
-          "hover:shadow-[0_0_30px_rgba(168,85,247,0.3)]",
-          "before:absolute before:inset-0 before:rounded-xl before:border before:border-purple-500/20 before:content-['']",
-          "after:absolute after:inset-0 after:rounded-xl after:border after:border-transparent after:content-[''] after:hover:border-purple-500/50",
-          featured ? "h-full" : "h-full",
-        )}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: index * 0.1 }}
-        whileHover={{ scale: 1.02 }}
+      <Card 
+        className={`overflow-hidden transition-all duration-300 hover:shadow-md hover:shadow-purple-500/10 hover:border-purple-500/30 ${
+          featured ? "border-purple-500/40 bg-purple-500/5" : ""
+        }`}
+        style={{
+          animationDelay: `${index * 150}ms`,
+        }}
       >
-        <div className="relative aspect-square overflow-hidden rounded-t-xl">
-          <Image
-            src={image || "/placeholder.svg"}
-            alt={name}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-          />
-          {featured && (
-            <div className="absolute top-3 right-3 z-10">
-              <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-none px-3 py-1 rounded-full">
-                Featured
-              </Badge>
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
-        </div>
-
-        <div className="relative p-4 bg-background/80 backdrop-blur-sm rounded-b-xl">
-          <h3 className="font-display text-lg font-bold line-clamp-1 group-hover:text-purple-400 transition-colors">
-            {name}
-          </h3>
-
-          <div className="mt-2 flex justify-between items-end">
-            <div>
-              <p className="text-xs text-muted-foreground">Current bid</p>
-              <p className="font-display text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                {currentBid} LSK
-              </p>
-            </div>
-
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground mb-1">Ends in</p>
-              <CountdownTimer endTime={endTime} compact />
+        <CardHeader className="p-0">
+          <div className="aspect-[4/3] relative overflow-hidden">
+            <img
+              src={image}
+              alt={name}
+              className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
+            />
+            
+            <div className="absolute top-2 right-2 flex gap-2">
+              {featured && (
+                <Badge className="bg-gradient-to-r from-purple-600 to-pink-600">Featured</Badge>
+              )}
+              
+              {timeLeft.expired ? (
+                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
+                  Ended
+                </Badge>
+              ) : timeLeft.days === 0 && timeLeft.hours < 12 ? (
+                <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20">
+                  Ending Soon
+                </Badge>
+              ) : null}
             </div>
           </div>
-        </div>
-      </motion.div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <h3 className="font-medium truncate">{name}</h3>
+          <p className="text-xs text-muted-foreground truncate mt-1">By {creatorAddress?.substring(0, 16)}...</p>
+        </CardContent>
+        <CardFooter className="p-4 pt-0 flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground">Current bid</p>
+            <p className="font-semibold">{currentBid.toLocaleString()} LSK</p>
+          </div>
+          
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Ends in</p>
+            <p className="font-mono text-sm">
+              {timeLeft.expired ? (
+                <span className="text-red-500">Ended</span>
+              ) : timeLeft.days > 0 ? (
+                `${timeLeft.days}d ${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s`
+              ) : (
+                `${timeLeft.hours}h ${timeLeft.minutes}m ${timeLeft.seconds}s`
+              )}
+            </p>
+          </div>
+        </CardFooter>
+      </Card>
     </Link>
-  )
+  );
 }

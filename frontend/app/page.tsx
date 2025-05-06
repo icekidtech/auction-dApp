@@ -1,83 +1,188 @@
-import { AuctionCard } from "@/components/auction-card"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
-import { ArrowRight, Sparkles } from "lucide-react"
+"use client";
 
-// Mock data for featured auctions
-const featuredAuctions = [
-  {
-    id: "1",
-    name: "Rare Digital Artwork #1",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 1250,
-    endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-    featured: true,
-  },
-  {
-    id: "2",
-    name: "Exclusive NFT Collection",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 890,
-    endTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000), // 4 days from now
-    featured: true,
-  },
-  {
-    id: "3",
-    name: "Virtual Land in Metaverse",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 3200,
-    endTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // 1 day from now
-    featured: true,
-  },
-]
+import { useQuery, gql } from "@apollo/client";
+import { AuctionCard } from "@/components/auction-card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Auction, Bid, ProcessedAuction } from "@/types/auction";
 
-// Mock data for active auctions
-const activeAuctions = [
-  {
-    id: "4",
-    name: "Digital Art Collection - Series 1",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 450,
-    endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "5",
-    name: "Blockchain Domain Name",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 780,
-    endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "6",
-    name: "Limited Edition Digital Collectible",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 320,
-    endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "7",
-    name: "Crypto Art Masterpiece",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 1100,
-    endTime: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "8",
-    name: "Virtual Reality Experience",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 590,
-    endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "9",
-    name: "Tokenized Real Estate Share",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 2400,
-    endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  },
-]
+// GraphQL query for featured auctions (highest value ones)
+const GET_FEATURED_AUCTIONS = gql`
+  query GetFeaturedAuctions {
+    auctionCreateds(
+      first: 3, 
+      orderBy: startingBid, 
+      orderDirection: desc,
+      where: {blockTimestamp_gt: ${Math.floor(Date.now() / 1000) - 60 * 60 * 24 * 7}}
+    ) {
+      id
+      auctionId
+      itemName
+      creatorAddress
+      startingBid
+      endTimestamp
+      blockTimestamp
+      transactionHash
+    }
+  }
+`;
+
+// GraphQL query for all active auctions
+const GET_ALL_AUCTIONS = gql`
+  query GetAllAuctions($skip: Int!, $first: Int!, $orderBy: String!, $orderDirection: String!) {
+    auctionCreateds(
+      skip: $skip
+      first: $first
+      orderBy: $orderBy
+      orderDirection: $orderDirection
+      where: {endTimestamp_gt: ${Math.floor(Date.now() / 1000)}}
+    ) {
+      id
+      auctionId
+      itemName
+      creatorAddress
+      startingBid
+      endTimestamp
+      blockTimestamp
+      transactionHash
+    }
+    bidPlaceds {
+      auctionId
+      amount
+    }
+  }
+`;
+
+// Query to get auction stats
+const GET_STATS = gql`
+  query GetStats {
+    auctionCreateds(first: 1000) {
+      id
+      auctionId
+    }
+    bidPlaceds {
+      id
+      bidderAddress
+      amount
+    }
+  }
+`;
 
 export default function Home() {
+  // State for auction sorting/filtering
+  const [sortOrder, setSortOrder] = useState({
+    orderBy: "blockTimestamp",
+    orderDirection: "desc"
+  });
+  
+  // Featured auctions query
+  const { 
+    data: featuredData, 
+    loading: featuredLoading, 
+    error: featuredError
+  } = useQuery(GET_FEATURED_AUCTIONS);
+  
+  // All auctions query with pagination and sorting
+  const { 
+    data: auctionsData, 
+    loading: auctionsLoading, 
+    error: auctionsError
+  } = useQuery(GET_ALL_AUCTIONS, {
+    variables: {
+      skip: 0,
+      first: 12,
+      orderBy: sortOrder.orderBy,
+      orderDirection: sortOrder.orderDirection
+    }
+  });
+  
+  // Stats query
+  const { 
+    data: statsData, 
+    loading: statsLoading 
+  } = useQuery(GET_STATS);
+
+  // Process auction data to get current highest bids
+  const processAuctionData = (auctions: Auction[], bids: Bid[]): ProcessedAuction[] => {
+    if (!auctions || !bids) return [];
+    
+    return auctions.map((auction: Auction) => {
+      // Find all bids for this auction
+      const auctionBids = bids.filter((bid: Bid) => 
+        bid.auctionId.toString() === auction.auctionId.toString()
+      );
+      
+      // Get highest bid amount or use starting bid if no bids
+      const currentBid = auctionBids.length > 0 
+        ? Math.max(...auctionBids.map((bid: Bid) => parseInt(bid.amount)))
+        : parseInt(auction.startingBid);
+
+      return {
+        id: auction.auctionId,
+        name: auction.itemName,
+        image: `/api/auction-image/${auction.auctionId}` || "/placeholder.svg?height=400&width=400",
+        currentBid: currentBid,
+        endTime: new Date(parseInt(auction.endTimestamp) * 1000),
+        creatorAddress: auction.creatorAddress
+      };
+    });
+  };
+  
+  // Process featured auctions
+  const featuredAuctions = featuredData?.auctionCreateds 
+    ? processAuctionData(
+        featuredData.auctionCreateds, 
+        auctionsData?.bidPlaceds || []
+      ).map((auction: ProcessedAuction) => ({ ...auction, featured: true }))
+    : [];
+  
+  // Process all auctions
+  const activeAuctions = auctionsData?.auctionCreateds 
+    ? processAuctionData(auctionsData.auctionCreateds, auctionsData.bidPlaceds)
+    : [];
+    
+  // Process stats
+  const stats = {
+    auctions: statsData?.auctionCreateds?.length || 0,
+    bids: statsData?.bidPlaceds?.length || 0,
+    users: statsData ? new Set([
+      ...statsData.auctionCreateds.map((a: Auction) => a.creatorAddress),
+      ...statsData.bidPlaceds.map((b: Bid) => b.bidderAddress)
+    ]).size : 0,
+    volume: statsData?.bidPlaceds 
+      ? statsData.bidPlaceds.reduce((sum: number, bid: Bid) => sum + parseInt(bid.amount), 0) / 1e8
+      : 0
+  };
+  
+  // Handle sort changes
+  const handleSortChange = (orderBy: string, orderDirection: string): void => {
+    setSortOrder({ orderBy, orderDirection });
+  };
+
+  // Loading state
+  if (featuredLoading && auctionsLoading && statsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-purple-500" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (featuredError || auctionsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-red-500 text-xl">Error loading auctions</p>
+          <p className="text-muted-foreground">Please check your connection and try again</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
@@ -115,29 +220,29 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats - Using actual data */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 max-w-4xl mx-auto">
             <div className="bg-background/30 backdrop-blur-sm border border-purple-500/10 rounded-xl p-4 text-center">
               <p className="font-display text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                1,234
+                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : stats.auctions.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">Active Auctions</p>
             </div>
             <div className="bg-background/30 backdrop-blur-sm border border-purple-500/10 rounded-xl p-4 text-center">
               <p className="font-display text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                56.7K
+                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : stats.bids.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">Total Bids</p>
             </div>
             <div className="bg-background/30 backdrop-blur-sm border border-purple-500/10 rounded-xl p-4 text-center">
               <p className="font-display text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                890
+                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : stats.users.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">Users</p>
             </div>
             <div className="bg-background/30 backdrop-blur-sm border border-purple-500/10 rounded-xl p-4 text-center">
               <p className="font-display text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                12.3K
+                {statsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : stats.volume.toLocaleString()}
               </p>
               <p className="text-sm text-muted-foreground">LSK Volume</p>
             </div>
@@ -163,41 +268,84 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            {featuredAuctions.map((auction, index) => (
-              <AuctionCard key={auction.id} {...auction} index={index} />
-            ))}
-          </div>
+          {featuredLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            </div>
+          ) : featuredAuctions.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+              {featuredAuctions.map((auction, index) => (
+                <AuctionCard key={auction.id} {...auction} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-purple-500/20 rounded-xl bg-background/30">
+              <p className="text-muted-foreground">No featured auctions available at the moment.</p>
+              <Button asChild className="mt-4 bg-purple-600 hover:bg-purple-500">
+                <Link href="/create">Create the first auction</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
 
       {/* All Auctions */}
       <section id="all" className="py-16 md:py-24 relative">
         <div className="container">
-          <div className="flex items-center justify-between mb-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
             <h2 className="font-display text-3xl font-bold">All Auctions</h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
-                variant="outline"
+                variant={sortOrder.orderBy === "blockTimestamp" && sortOrder.orderDirection === "desc" ? "outline" : "ghost"}
                 size="sm"
-                className="border-purple-500/20 hover:bg-purple-500/10 hover:text-purple-400"
+                className={sortOrder.orderBy === "blockTimestamp" && sortOrder.orderDirection === "desc" 
+                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
+                  : ""}
+                onClick={() => handleSortChange("blockTimestamp", "desc")}
               >
                 Latest
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant={sortOrder.orderBy === "endTimestamp" && sortOrder.orderDirection === "asc" ? "outline" : "ghost"}
+                size="sm"
+                className={sortOrder.orderBy === "endTimestamp" && sortOrder.orderDirection === "asc" 
+                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
+                  : ""}
+                onClick={() => handleSortChange("endTimestamp", "asc")}
+              >
                 Ending Soon
               </Button>
-              <Button variant="ghost" size="sm">
+              <Button 
+                variant={sortOrder.orderBy === "startingBid" && sortOrder.orderDirection === "desc" ? "outline" : "ghost"}
+                size="sm"
+                className={sortOrder.orderBy === "startingBid" && sortOrder.orderDirection === "desc" 
+                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
+                  : ""}
+                onClick={() => handleSortChange("startingBid", "desc")}
+              >
                 Price: High to Low
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {activeAuctions.map((auction, index) => (
-              <AuctionCard key={auction.id} {...auction} index={index} />
-            ))}
-          </div>
+          {auctionsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            </div>
+          ) : activeAuctions.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {activeAuctions.map((auction, index) => (
+                <AuctionCard key={auction.id} {...auction} index={index} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 border border-dashed border-purple-500/20 rounded-xl bg-background/30">
+              <p className="text-muted-foreground">No active auctions available at the moment.</p>
+              <Button asChild className="mt-4 bg-purple-600 hover:bg-purple-500">
+                <Link href="/create">Create the first auction</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </section>
     </main>
