@@ -43,6 +43,7 @@ interface WalletContextType {
   contract: Contract | null;
   connect: (walletType?: string) => Promise<void>;
   disconnect: () => void;
+  isConnecting: boolean;
 }
 
 // Default context state
@@ -54,6 +55,7 @@ const defaultContext: WalletContextType = {
   contract: null,
   connect: async () => {},
   disconnect: () => {},
+  isConnecting: false,
 };
 
 // Create context
@@ -170,6 +172,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     contract,
     connect,
     disconnect,
+    isConnecting,
   };
 
   return (
