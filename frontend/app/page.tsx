@@ -8,6 +8,21 @@ import { ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Auction, Bid, ProcessedAuction } from "@/types/auction";
 
+// Make sure your query looks something like this:
+const GET_AUCTIONS = gql`
+  query GetAuctions {
+    auctionCreateds(orderBy: blockTimestamp, orderDirection: desc) {
+      id
+      auctionId
+      itemName
+      imageUrl
+      startingBid
+      endTimestamp
+      creatorAddress
+    }
+  }
+`;
+
 // GraphQL query for featured auctions (highest value ones)
 const GET_FEATURED_AUCTIONS = gql`
   query GetFeaturedAuctions {
