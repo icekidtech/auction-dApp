@@ -127,6 +127,18 @@ export default function Home() {
   console.log("GraphQL error:", error);
   console.log("GraphQL data:", data);
 
+  // Add this logging to the component where you make the GraphQL query
+  console.log("GraphQL variables:", { skip: 0, first: 12, orderBy: sortOrder.orderBy, orderDirection: sortOrder.orderDirection });
+  console.log("GraphQL query:", GET_ALL_AUCTIONS.loc?.source.body);
+
+  const { data: allAuctionsData, loading: allAuctionsLoading, error: allAuctionsError } = useQuery(GET_ALL_AUCTIONS, {
+    variables: { skip: 0, first: 12, orderBy: sortOrder.orderBy, orderDirection: sortOrder.orderDirection },
+  });
+
+  console.log("GraphQL loading state:", allAuctionsLoading);
+  console.log("GraphQL error:", allAuctionsError);
+  console.log("GraphQL data:", allAuctionsData);
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error.message}</p>;
 
