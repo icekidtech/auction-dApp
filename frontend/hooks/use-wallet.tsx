@@ -94,23 +94,36 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const connect = useCallback(async (walletType?: string) => {
-    if (isConnecting || isConnected) {
-      console.log("Already connected or connecting, skipping connect() call");
-      return;
-    }
-    
+    if (isConnecting || isConnected) return;
     setIsConnecting(true);
-    console.log("Attempting to connect wallet...");
     
     try {
-      // Existing connection code...
-      console.log("Connected successfully to address:", connectedAddress);
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const userAddress = accounts[0];
+      
+      const ethersProvider = new providers.Web3Provider(window.ethereum);
+      setProvider(ethersProvider);
+      
+      // Get and set balance
+      const bigintBalance = await ethersProvider.getBalance(userAddress);
+      const formattedBalance = ethers.utils.formatEther(bigintBalance);
+      setBalance(formattedBalance);
+      
+      // Set wallet state
+      setAddress(userAddress);
+      setIsConnected(true);
+      
+      // Save address for auto-reconnect
+      localStorage.setItem("zenthra-wallet-address", userAddress);
+      
+      console.log("Connected successfully to address:", userAddress);
     } catch (error) {
-      console.error("Connection error:", error);
+      console.error("Error connecting:", error);
+      // Error handling...
     } finally {
       setIsConnecting(false);
     }
-  }, [isConnected, isConnecting, toast]);
+  }, [isConnected, isConnecting]);
 
   const disconnect = useCallback(() => {
     setAddress(null);
