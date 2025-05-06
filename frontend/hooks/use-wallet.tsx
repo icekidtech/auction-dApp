@@ -96,13 +96,35 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (walletType?: string) => {
     if (isConnecting || isConnected) return;
     setIsConnecting(true);
+    console.log("Starting wallet connection attempt...");
     
     try {
+      if (!window.ethereum) {
+        toast({
+          variant: "destructive",
+          title: "No Ethereum Provider",
+          description: "Please install MetaMask or another compatible wallet"
+        });
+        return;
+      }
+      
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       const userAddress = accounts[0];
       
       const ethersProvider = new providers.Web3Provider(window.ethereum);
       setProvider(ethersProvider);
+      
+      // Check we're on the right network
+      const network = await ethersProvider.getNetwork();
+      setChainId(network.chainId);
+      
+      if (network.chainId !== CHAIN_ID) {
+        toast({
+          variant: "destructive",
+          title: "Wrong Network",
+          description: `Please switch to Lisk chain ID ${CHAIN_ID}`
+        });
+      }
       
       // Get and set balance
       const bigintBalance = await ethersProvider.getBalance(userAddress);
@@ -116,14 +138,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // Save address for auto-reconnect
       localStorage.setItem("zenthra-wallet-address", userAddress);
       
-      console.log("Connected successfully to address:", userAddress);
+      // Add event listeners for account and chain changes
+      window.ethereum.on('accountsChanged', handleAccountChange);
+      window.ethereum.on('chainChanged', handleChainChange);
+      
+      console.log("Wallet connected successfully:", userAddress);
+      
+      toast({
+        title: "Wallet Connected",
+        description: `Connected to ${userAddress.substring(0,6)}...${userAddress.substring(userAddress.length-4)}`
+      });
     } catch (error) {
-      console.error("Error connecting:", error);
-      // Error handling...
+      console.error("Wallet connection error:", error);
+      toast({
+        variant: "destructive",
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "Failed to connect wallet"
+      });
     } finally {
       setIsConnecting(false);
     }
-  }, [isConnected, isConnecting]);
+  }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange]);
 
   const disconnect = useCallback(() => {
     setAddress(null);
