@@ -1,252 +1,170 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AuctionCard } from "@/components/auction-card"
-import { PlusCircle, Sparkles, Clock, Trophy } from "lucide-react"
-import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { useQuery, gql } from "@apollo/client";
+import { useWallet } from "@/hooks/use-wallet";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2, ArrowRight, Package, Gavel, Trophy, History } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
-// Mock data for created auctions
-const createdAuctions = [
-  {
-    id: "101",
-    name: "Digital Art Collection - Series 1",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 450,
-    endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "102",
-    name: "Blockchain Domain Name",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 780,
-    endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-  },
-]
-
-// Mock data for active bids
-const activeBids = [
-  {
-    id: "201",
-    name: "Rare Digital Artwork #1",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 1250,
-    endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "202",
-    name: "Exclusive NFT Collection",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 890,
-    endTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: "203",
-    name: "Virtual Land in Metaverse",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 3200,
-    endTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
-  },
-]
-
-// Mock data for won items
-const wonItems = [
-  {
-    id: "301",
-    name: "Limited Edition Digital Collectible",
-    image: "/placeholder.svg?height=400&width=400",
-    currentBid: 320,
-    endTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  },
-]
-
-export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("created")
-
-  const getEmptyStateContent = (tab: string) => {
-    switch (tab) {
-      case "created":
-        return {
-          title: "No Created Auctions",
-          description: "You haven't created any auctions yet.",
-          buttonText: "Create Your First Auction",
-          buttonLink: "/create",
-          icon: <Sparkles className="h-12 w-12 text-purple-400 mb-4" />,
-        }
-      case "active":
-        return {
-          title: "No Active Bids",
-          description: "You haven't placed any bids yet.",
-          buttonText: "Browse Auctions",
-          buttonLink: "/",
-          icon: <Clock className="h-12 w-12 text-purple-400 mb-4" />,
-        }
-      case "won":
-        return {
-          title: "No Won Items",
-          description: "You haven't won any auctions yet.",
-          buttonText: "Browse Auctions",
-          buttonLink: "/",
-          icon: <Trophy className="h-12 w-12 text-purple-400 mb-4" />,
-        }
-      default:
-        return {
-          title: "No Items",
-          description: "Nothing to show here.",
-          buttonText: "Browse Auctions",
-          buttonLink: "/",
-          icon: null,
-        }
+// GraphQL query for dashboard stats
+const GET_USER_STATS = gql`
+  query GetUserStats($address: String!) {
+    auctionCreateds(where: {creatorAddress: $address}) {
+      id
+      auctionId
+    }
+    bidPlaceds(where: {bidderAddress: $address}) {
+      id
+      auctionId
+      amount
+    }
+    auctionCompleteds(where: {winner: $address}) {
+      id
+      auctionId
+      finalPrice
     }
   }
+`;
 
-  return (
-    <main className="min-h-screen py-12">
-      <div className="container">
-        <motion.div
-          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-10"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="font-display text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-            My Dashboard
-          </h1>
-          <Button
-            asChild
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-          >
-            <Link href="/create" className="flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              <span>Create New Auction</span>
-            </Link>
-          </Button>
-        </motion.div>
+export default function DashboardPage() {
+  const { address } = useWallet();
+  
+  const { data, loading, error } = useQuery(GET_USER_STATS, {
+    variables: { address: address || "" },
+    skip: !address,
+  });
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          <Tabs defaultValue="created" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8 bg-background/50 p-1 rounded-full border border-purple-500/20">
-              <TabsTrigger
-                value="created"
-                className={cn(
-                  "rounded-full data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400",
-                  "transition-all duration-300",
-                )}
-              >
-                Created ({createdAuctions.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="active"
-                className={cn(
-                  "rounded-full data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400",
-                  "transition-all duration-300",
-                )}
-              >
-                Active Bids ({activeBids.length})
-              </TabsTrigger>
-              <TabsTrigger
-                value="won"
-                className={cn(
-                  "rounded-full data-[state=active]:bg-purple-500/10 data-[state=active]:text-purple-400",
-                  "transition-all duration-300",
-                )}
-              >
-                Won Items ({wonItems.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="created">
-              {createdAuctions.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {createdAuctions.map((auction, index) => (
-                    <AuctionCard key={auction.id} {...auction} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState tab="created" />
-              )}
-            </TabsContent>
-
-            <TabsContent value="active">
-              {activeBids.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {activeBids.map((auction, index) => (
-                    <AuctionCard key={auction.id} {...auction} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState tab="active" />
-              )}
-            </TabsContent>
-
-            <TabsContent value="won">
-              {wonItems.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {wonItems.map((auction, index) => (
-                    <AuctionCard key={auction.id} {...auction} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState tab="won" />
-              )}
-            </TabsContent>
-          </Tabs>
-        </motion.div>
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
       </div>
-    </main>
-  )
-}
+    );
+  }
 
-function EmptyState({ tab }: { tab: string }) {
-  const content = {
-    created: {
-      title: "No Created Auctions",
-      description: "You haven't created any auctions yet.",
-      buttonText: "Create Your First Auction",
-      buttonLink: "/create",
-      icon: <Sparkles className="h-12 w-12 text-purple-400 mb-4" />,
-    },
-    active: {
-      title: "No Active Bids",
-      description: "You haven't placed any bids yet.",
-      buttonText: "Browse Auctions",
-      buttonLink: "/",
-      icon: <Clock className="h-12 w-12 text-purple-400 mb-4" />,
-    },
-    won: {
-      title: "No Won Items",
-      description: "You haven't won any auctions yet.",
-      buttonText: "Browse Auctions",
-      buttonLink: "/",
-      icon: <Trophy className="h-12 w-12 text-purple-400 mb-4" />,
-    },
-  }[tab]
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-2">Error loading dashboard data</p>
+        <p className="text-muted-foreground">{error.message}</p>
+      </div>
+    );
+  }
+
+  // Calculate statistics from queried data
+  const stats = {
+    created: data?.auctionCreateds?.length || 0,
+    bids: data?.bidPlaceds?.length || 0,
+    won: data?.auctionCompleteds?.length || 0,
+    totalSpent: data?.auctionCompleteds
+      ? data.auctionCompleteds.reduce((sum: number, auction: any) => sum + parseInt(auction.finalPrice), 0)
+      : 0,
+  };
 
   return (
-    <motion.div
-      className="rounded-2xl border border-purple-500/20 bg-background/50 backdrop-blur-sm p-12 text-center"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="max-w-md mx-auto">
-        {content.icon}
-        <h2 className="font-display text-2xl font-bold mb-2">{content.title}</h2>
-        <p className="text-muted-foreground mb-6">{content.description}</p>
-        <Button
-          asChild
-          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-        >
-          <Link href={content.buttonLink}>{content.buttonText}</Link>
+    <div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <DashboardCard 
+          title="Created Auctions" 
+          value={stats.created} 
+          description="Auctions you've created" 
+          icon={<Package className="h-5 w-5" />}
+          link="/dashboard/created"
+        />
+        <DashboardCard 
+          title="Active Bids" 
+          value={stats.bids} 
+          description="Auctions you've bid on" 
+          icon={<Gavel className="h-5 w-5" />}
+          link="/dashboard/bidding"
+        />
+        <DashboardCard 
+          title="Won Auctions" 
+          value={stats.won} 
+          description="Auctions you've won" 
+          icon={<Trophy className="h-5 w-5" />}
+          link="/dashboard/won"
+        />
+        <DashboardCard 
+          title="Total Spent" 
+          value={`${(stats.totalSpent / 1e8).toLocaleString()} LSK`} 
+          description="Total LSK spent on auctions" 
+          icon={<History className="h-5 w-5" />}
+        />
+      </div>
+
+      <div className="mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+            <CardDescription>Your latest auction activities</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {data?.bidPlaceds && data.bidPlaceds.length > 0 ? (
+              <div className="space-y-4">
+                {data.bidPlaceds.slice(0, 5).map((bid: any) => (
+                  <div key={bid.id} className="flex justify-between items-center border-b pb-3">
+                    <div>
+                      <p className="font-medium">Bid on Auction #{bid.auctionId}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(parseInt(bid.timestamp) * 1000).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">{parseInt(bid.amount) / 1e8} LSK</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground py-4 text-center">No recent activity found</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-center">
+        <Button asChild>
+          <Link href="/create" className="flex items-center gap-2">
+            Create a New Auction <ArrowRight className="h-4 w-4" />
+          </Link>
         </Button>
       </div>
-    </motion.div>
-  )
+    </div>
+  );
+}
+
+function DashboardCard({ 
+  title, 
+  value, 
+  description, 
+  icon,
+  link
+}: { 
+  title: string; 
+  value: string | number; 
+  description: string;
+  icon: React.ReactNode;
+  link?: string;
+}) {
+  const content = (
+    <Card className="transition-all hover:border-purple-500/30 hover:shadow-sm hover:shadow-purple-500/10">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-lg font-medium">{title}</CardTitle>
+        <div className="rounded-full p-2 bg-purple-500/10 text-purple-500">
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold">{value}</div>
+        <p className="text-xs text-muted-foreground mt-1">{description}</p>
+      </CardContent>
+    </Card>
+  );
+
+  if (link) {
+    return <Link href={link}>{content}</Link>;
+  }
+  return content;
 }
