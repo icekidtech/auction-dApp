@@ -1,95 +1,94 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "./ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "./ui/dialog";
-import Image from "next/image";
+import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
-
-const walletOptions = [
-  {
-    id: "lisk",
-    name: "Lisk Wallet",
-    logo: "/images/lisk-logo.png",
-  },
-  {
-    id: "metamask",
-    name: "MetaMask",
-    logo: "/images/metamask-logo.png", 
-  },
-  {
-    id: "walletconnect",
-    name: "WalletConnect",
-    logo: "/images/walletconnect-logo.png",
-  },
-];
+import { Check, ChevronDown, Copy, ExternalLink, LogOut, Wallet } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "@/components/ui/use-toast";
 
 export function WalletConnect() {
-  const [isOpen, setIsOpen] = useState(false);
-  const { connect, address, isConnected, disconnect } = useWallet();
+  const { address, isConnected, balance, connect, disconnect } = useWallet();
+  const [copied, setCopied] = useState(false);
 
-  const handleConnect = async (walletId: string) => {
-    try {
-      await connect(walletId);
-      setIsOpen(false);
-    } catch (error) {
-      console.error("Failed to connect:", error);
-      // You could show an error message here
+  const copyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({
+        title: "Address Copied",
+        description: "Address copied to clipboard",
+      });
     }
   };
 
-  return (
-    <>
-      {isConnected ? (
-        <Button 
-          onClick={disconnect}
-          variant="outline"
-          className="bg-green-50 text-green-900 hover:bg-green-100 border-green-300"
-        >
-          {`${address.substring(0, 6)}...${address.substring(address.length - 4)}`}
-        </Button>
-      ) : (
-        <Button onClick={() => setIsOpen(true)}>
-          Connect Wallet
-        </Button>
-      )}
+  const viewOnExplorer = () => {
+    if (address) {
+      const explorerUrl = `https://explorer.sepolia.lisk.com/address/${address}`;
+      window.open(explorerUrl, "_blank");
+    }
+  };
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Connect Wallet</DialogTitle>
-            <DialogDescription>
-              Choose a wallet to connect to Zenthra
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {walletOptions.map((wallet) => (
-              <Button
-                key={wallet.id}
-                variant="outline"
-                className="flex justify-start items-center gap-4 h-16"
-                onClick={() => handleConnect(wallet.id)}
-              >
-                <div className="w-8 h-8 relative">
-                  <Image
-                    src={wallet.logo}
-                    alt={wallet.name}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span>{wallet.name}</span>
-              </Button>
-            ))}
+  if (isConnected && address) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" className="flex items-center gap-2">
+            <span className="truncate max-w-[100px] hidden md:inline-block">
+              {address.substring(0, 6)}...{address.substring(address.length - 4)}
+            </span>
+            <span className="md:hidden">
+              <Wallet className="h-4 w-4" />
+            </span>
+            <ChevronDown className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <div className="p-2">
+            <p className="text-sm font-medium">Connected Wallet</p>
+            <p className="text-xs text-muted-foreground truncate mt-1">
+              {address}
+            </p>
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+          <DropdownMenuSeparator />
+          <div className="p-2">
+            <p className="text-xs font-medium">Balance</p>
+            <p className="text-sm">{parseFloat(balance).toFixed(4)} LSK</p>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
+            {copied ? (
+              <Check className="mr-2 h-4 w-4" />
+            ) : (
+              <Copy className="mr-2 h-4 w-4" />
+            )}
+            <span>{copied ? "Copied" : "Copy Address"}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={viewOnExplorer} className="cursor-pointer">
+            <ExternalLink className="mr-2 h-4 w-4" />
+            <span>View on Explorer</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={disconnect} className="cursor-pointer text-destructive">
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Disconnect</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <Button onClick={() => connect()} className="flex items-center gap-2">
+      <Wallet className="h-4 w-4" />
+      <span className="hidden sm:inline-block">Connect Wallet</span>
+    </Button>
   );
 }
