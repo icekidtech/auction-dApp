@@ -65,12 +65,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const connect = async (walletTypeToConnect: string) => {
+  const connect = async (walletTypeToConnect?: string) => {
+    // Choose default wallet if none specified
+    const walletType = walletTypeToConnect || "metamask"; // Or your default wallet
+
     try {
-      console.log(`Connecting to ${walletTypeToConnect}...`);
+      console.log(`Connecting to ${walletType}...`);
       let connectedAddress = "";
       
-      switch (walletTypeToConnect) {
+      switch (walletType) {
         case "lisk":
           // Import Lisk wallet SDK dynamically to avoid issues in SSR
           try {
@@ -148,11 +151,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       
       // Save to state and localStorage
       setAddress(connectedAddress);
-      setWalletType(walletTypeToConnect);
+      setWalletType(walletType);
       setIsConnected(true);
       localStorage.setItem("zenthra_wallet", JSON.stringify({ 
         address: connectedAddress,
-        walletType: walletTypeToConnect
+        walletType: walletType
       }));
       
       return Promise.resolve();

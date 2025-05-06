@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ethers } from "ethers";
+import { parseUnits } from "ethers"; // Changed from import { ethers } to import { parseUnits }
 import { PageTitle } from "@/components/page-title";
 import { Loader2, Calendar, Clock, Coins } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -80,7 +80,7 @@ export default function CreateAuctionPage() {
     setIsSubmitting(true);
     try {
       // Convert values to contract format
-      const startingBid = ethers.parseUnits(values.startingBid, 8); // 8 decimals for LSK
+      const startingBid = parseUnits(values.startingBid, 8); // Fixed this line, 8 decimals for LSK
       const durationInHours = parseInt(values.duration);
       const endTimestamp = Math.floor(Date.now() / 1000) + durationInHours * 60 * 60;
 
