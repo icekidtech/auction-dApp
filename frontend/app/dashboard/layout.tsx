@@ -6,6 +6,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageTitle } from "@/components/page-title";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardLayout({
   children,
@@ -15,22 +16,14 @@ export default function DashboardLayout({
   const { isConnected, address, connect } = useWallet();
   const router = useRouter();
 
-  // Redirect to homepage if not connected
   useEffect(() => {
     if (!isConnected) {
-      // Try to connect first
+      console.log("Dashboard: prompting wallet connection");
       connect();
-      // If still not connected after 2 seconds, redirect
-      const timeout = setTimeout(() => {
-        if (!isConnected) {
-          router.push("/");
-        }
-      }, 2000);
-      return () => clearTimeout(timeout);
     }
-  }, [isConnected, router, connect]);
+  }, [isConnected, connect]);
 
-  // Show loading state while checking connection
+  // Show loading while connecting, not redirecting immediately
   if (!isConnected) {
     return (
       <div className="container py-20 flex flex-col items-center justify-center min-h-[70vh]">
@@ -39,6 +32,10 @@ export default function DashboardLayout({
         <p className="text-muted-foreground mt-2">
           Please connect your wallet to view your dashboard
         </p>
+        {/* Add explicit connect button as fallback */}
+        <Button onClick={() => connect()} className="mt-6">
+          Connect Wallet
+        </Button>
       </div>
     );
   }
