@@ -50,7 +50,7 @@ export default function WonAuctionsPage() {
       return {
         id: auction.auctionId,
         name: auction.itemName,
-        image: `/api/auction-image/${auction.auctionId}`,
+        image: `/api/auction-image/${auction.auctionId}`, // Updated image path
         currentBid: parseInt(completed.finalPrice) / 1e8,
         endTime: new Date(parseInt(auction.endTimestamp) * 1000),
         creatorAddress: auction.creatorAddress,

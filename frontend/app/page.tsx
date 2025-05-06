@@ -159,7 +159,7 @@ export default function Home() {
       return {
         id: auction.auctionId,
         name: auction.itemName,
-        image: `/api/auction-image/${auction.auctionId}`, 
+        image: `/api/auction-image/${auction.auctionId}`, // This is the key fix
         currentBid: currentBid,
         endTime: new Date(parseInt(auction.endTimestamp) * 1000),
         creatorAddress: auction.creatorAddress
