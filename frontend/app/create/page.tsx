@@ -1,263 +1,316 @@
-"use client"
+"use client";
 
-import type React from "react"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useWallet } from "@/hooks/use-wallet";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { ethers } from "ethers";
+import { PageTitle } from "@/components/page-title";
+import { Loader2, Calendar, Clock, Coins } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/use-toast";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
-import { Calendar, Upload } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
+// Form validation schema
+const formSchema = z.object({
+  itemName: z.string().min(3, "Item name must be at least 3 characters"),
+  itemDescription: z.string().min(10, "Description must be at least 10 characters"),
+  imageUrl: z.string().url("Please enter a valid image URL"),
+  startingBid: z.string().refine(
+    (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
+    "Starting bid must be greater than 0"
+  ),
+  duration: z.string().refine(
+    (val) => !isNaN(parseInt(val)) && parseInt(val) > 0, 
+    "Duration must be a positive number"
+  ),
+});
 
 export default function CreateAuctionPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [date, setDate] = useState<Date>()
-  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const { isConnected, connect, contract } = useWallet();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setPreviewImage(reader.result as string)
-      }
-      reader.readAsDataURL(file)
+  // Initialize form with default values
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      itemName: "",
+      itemDescription: "",
+      imageUrl: "",
+      startingBid: "0.1",
+      duration: "3",
+    },
+  });
+
+  // Try to connect wallet when page loads
+  useEffect(() => {
+    if (!isConnected) {
+      connect();
+    }
+  }, [isConnected, connect]);
+
+  // Submit handler
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!isConnected || !contract) {
+      toast({
+        variant: "destructive",
+        title: "Wallet not connected",
+        description: "Please connect your wallet to create an auction",
+      });
+      connect();
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Convert values to contract format
+      const startingBid = ethers.parseUnits(values.startingBid, 8); // 8 decimals for LSK
+      const durationInHours = parseInt(values.duration);
+      const endTimestamp = Math.floor(Date.now() / 1000) + durationInHours * 60 * 60;
+
+      // Call contract method to create auction
+      const tx = await contract.createAuction(
+        values.itemName,
+        values.imageUrl,
+        startingBid,
+        endTimestamp
+      );
+
+      toast({
+        title: "Transaction submitted",
+        description: "Your auction creation transaction has been sent to the blockchain",
+      });
+
+      // Wait for transaction to be mined
+      await tx.wait();
+
+      toast({
+        title: "Auction created!",
+        description: "Your auction has been successfully created",
+      });
+
+      // Redirect to home page
+      router.push("/");
+    } catch (error: any) {
+      console.error("Error creating auction:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create auction",
+        description: error.message || "An unknown error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Auction created!",
-        description: "Your auction has been created successfully.",
-      })
-      setIsSubmitting(false)
-      router.push("/dashboard")
-    }, 1500)
+  // If not connected, show connect prompt
+  if (!isConnected) {
+    return (
+      <div className="container py-20 flex flex-col items-center justify-center min-h-[70vh]">
+        <div className="max-w-md w-full space-y-8 text-center">
+          <PageTitle 
+            title="Connect Wallet" 
+            subtitle="Please connect your wallet to create an auction"
+            align="center"
+          />
+          <Button 
+            onClick={() => connect()} 
+            size="lg" 
+            className="mt-6 w-full"
+          >
+            Connect Wallet
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <main className="min-h-screen py-12">
-      <div className="container max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <h1 className="font-display text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400 mb-2">
-            Create New Auction
-          </h1>
-          <p className="text-muted-foreground">
-            Fill in the details below to list your item for auction on the Zenthra platform.
-          </p>
-        </motion.div>
+    <div className="container py-8 md:py-12">
+      <PageTitle
+        title="Create Auction"
+        subtitle="List a new item for auction on the Zenthra platform"
+      />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="rounded-2xl border border-purple-500/20 bg-background/50 backdrop-blur-sm overflow-hidden"
-        >
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8">
-            <div className="space-y-6 md:col-span-1">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-sm font-medium">
-                  Item Name
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="Enter item name"
-                  required
-                  className="bg-background/50 border-purple-500/20 focus-visible:ring-purple-500/30"
-                />
-              </div>
+      <div className="grid gap-8 mt-8 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="itemName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Unique Digital Artwork #123" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Enter a descriptive name for your auction item
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-sm font-medium">
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe your auction item in detail"
-                  className="min-h-[180px] bg-background/50 border-purple-500/20 focus-visible:ring-purple-500/30"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="starting-bid" className="text-sm font-medium">
-                    Starting Bid (LSK)
-                  </Label>
-                  <Input
-                    id="starting-bid"
-                    type="number"
-                    placeholder="Enter amount"
-                    min="1"
-                    step="1"
-                    required
-                    className="bg-background/50 border-purple-500/20 focus-visible:ring-purple-500/30"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="end-date" className="text-sm font-medium">
-                    Auction End Date
-                  </Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        id="end-date"
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal bg-background/50 border-purple-500/20 hover:bg-purple-500/10 hover:text-purple-400",
-                          !date && "text-muted-foreground",
-                        )}
-                      >
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {date ? format(date, "PPP") : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 border border-purple-500/20">
-                      <CalendarComponent
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        initialFocus
-                        disabled={(date) => date < new Date()}
+              <FormField
+                control={form.control}
+                name="itemDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Describe your item in detail..." 
+                        className="min-h-[120px]"
+                        {...field} 
                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-            </div>
+                    </FormControl>
+                    <FormDescription>
+                      Provide a detailed description of what you're selling
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <div className="space-y-6 md:col-span-1">
-              <div className="space-y-2">
-                <Label htmlFor="image" className="text-sm font-medium">
-                  Upload Image
-                </Label>
-                <div
-                  className={cn(
-                    "border border-dashed border-purple-500/20 rounded-xl overflow-hidden transition-all",
-                    "hover:border-purple-500/40 hover:bg-purple-500/5",
-                    previewImage ? "aspect-square" : "p-8",
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Image URL</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com/image.jpg" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Enter a URL to an image of your item (IPFS links recommended)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="startingBid"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Starting Bid (LSK)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Coins className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input type="number" step="0.01" className="pl-9" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        The minimum bid in LSK tokens
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                >
-                  {previewImage ? (
-                    <div className="relative aspect-square">
-                      <img
-                        src={previewImage || "/placeholder.svg"}
-                        alt="Preview"
-                        className="object-cover w-full h-full"
-                      />
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="absolute bottom-3 right-3 bg-background/80 backdrop-blur-sm"
-                        onClick={() => setPreviewImage(null)}
-                      >
-                        Change Image
-                      </Button>
-                    </div>
+                />
+
+                <FormField
+                  control={form.control}
+                  name="duration"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Duration (hours)</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input type="number" min="1" className="pl-9" {...field} />
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        How long the auction will run in hours
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="pt-4">
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Auction...
+                    </>
                   ) : (
-                    <label
-                      htmlFor="image-upload"
-                      className="flex flex-col items-center justify-center gap-2 cursor-pointer h-full"
-                    >
-                      <Upload className="h-8 w-8 text-purple-400" />
-                      <p className="text-sm text-center text-muted-foreground">Click to upload or drag and drop</p>
-                      <p className="text-xs text-center text-muted-foreground">PNG, JPG or GIF (max. 5MB)</p>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        required
-                        onChange={handleImageChange}
-                      />
-                    </label>
+                    "Create Auction"
                   )}
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-4">
-                <h3 className="font-medium">Auction Settings</h3>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
-                  <div>
-                    <p className="font-medium">Reserve Price</p>
-                    <p className="text-sm text-muted-foreground">Set a minimum price for your item</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="Optional"
-                      min="0"
-                      step="1"
-                      className="w-24 bg-background/50 border-purple-500/20 focus-visible:ring-purple-500/30"
-                    />
-                    <span className="text-sm">LSK</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-lg border border-purple-500/20">
-                  <div>
-                    <p className="font-medium">Royalty</p>
-                    <p className="text-sm text-muted-foreground">Earn on future sales</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      placeholder="5%"
-                      min="0"
-                      max="15"
-                      step="0.5"
-                      className="w-20 bg-background/50 border-purple-500/20 focus-visible:ring-purple-500/30"
-                    />
-                    <span className="text-sm">%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-4 md:col-span-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push("/")}
-                className="border-purple-500/20 hover:bg-purple-500/10 hover:text-purple-400"
-              >
-                Cancel
-              </Button>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  type="submit"
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500"
-                  disabled={isSubmitting || !date}
-                >
-                  {isSubmitting ? "Creating..." : "Create Auction"}
                 </Button>
-              </motion.div>
-            </div>
-          </form>
-        </motion.div>
+              </div>
+            </form>
+          </Form>
+        </div>
+
+        <div>
+          <div className="sticky top-20">
+            <h3 className="text-lg font-medium mb-4">Auction Preview</h3>
+            
+            <Card className="overflow-hidden">
+              <div className="aspect-square bg-muted flex items-center justify-center">
+                {form.watch("imageUrl") ? (
+                  <img 
+                    src={form.watch("imageUrl")} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/placeholder.svg?height=400&width=400";
+                    }}
+                  />
+                ) : (
+                  <div className="text-muted-foreground">Image Preview</div>
+                )}
+              </div>
+              <CardContent className="p-4">
+                <h3 className="font-medium truncate">
+                  {form.watch("itemName") || "Item Name"}
+                </h3>
+                <p className="text-sm text-muted-foreground truncate mt-1">
+                  Starting bid: {form.watch("startingBid") || "0"} LSK
+                </p>
+                
+                <div className="flex items-center mt-3 gap-2 text-sm">
+                  <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-muted-foreground">
+                    Ends in: {form.watch("duration") || "0"} hours
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Alert className="mt-6">
+              <AlertTitle>Important</AlertTitle>
+              <AlertDescription>
+                Creating an auction will require a transaction on the Lisk blockchain. 
+                Make sure your wallet has enough LSK to cover gas fees.
+              </AlertDescription>
+            </Alert>
+          </div>
+        </div>
       </div>
-    </main>
-  )
+    </div>
+  );
 }
