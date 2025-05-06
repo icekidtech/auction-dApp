@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import type { Metadata } from "next";
 import { Space_Grotesk, Syne } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
@@ -22,10 +21,7 @@ const syne = Syne({
   variable: "--font-syne",
 });
 
-export const metadata: Metadata = {
-  title: "Zenthra",
-  description: "Decentralized auction platform built on the Lisk blockchain",
-};
+// Removed metadata export - it's now in metadata.ts
 
 export default function RootLayout({
   children,
@@ -34,6 +30,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <title>Zenthra</title>
+        <meta name="description" content="Decentralized auction platform built on the Lisk blockchain" />
+      </head>
       <body
         className={cn(
           "min-h-screen font-sans antialiased",
