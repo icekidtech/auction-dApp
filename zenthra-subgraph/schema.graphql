@@ -1,0 +1,41 @@
+type AuctionCompleted @entity(immutable: true) {
+  id: Bytes!
+  auctionId: BigInt! # uint256
+  winner: String! # string
+  finalPrice: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type AuctionCreated @entity(immutable: true) {
+  id: Bytes!
+  auctionId: BigInt! # uint256
+  creatorAddress: String! # string
+  itemName: String! # string
+  startingBid: BigInt! # uint256
+  endTimestamp: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type BidPlaced @entity(immutable: true) {
+  id: Bytes!
+  auctionId: BigInt! # uint256
+  bidderAddress: String! # string
+  amount: BigInt! # uint256
+  timestamp: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: Bytes!
+  previousOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}

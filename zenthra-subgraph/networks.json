@@ -1,0 +1,8 @@
+{
+  "sepolia": {
+    "AuctionPlatform": {
+      "address": "0xBf8F0475C5328a0bdC78ad2682E97a7cdFFBee3C",
+      "startBlock": 0
+    }
+  }
+}
