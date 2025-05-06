@@ -1,9 +1,15 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { ethers, BrowserProvider, Contract } from "ethers";
-import AuctionPlatform from "@/artifacts/contracts/AuctionPlatform.sol/AuctionPlatform.json";
+import { ethers, providers, Contract } from "ethers";
+import AuctionPlatform from "../artifacts/contracts/AuctionPlatform.sol/AuctionPlatform.json";
 import { useToast } from "@/components/ui/use-toast";
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 // Define the shape of our wallet context
 interface WalletContextType {
@@ -40,7 +46,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState("0");
   const [chainId, setChainId] = useState<number | null>(null);
   const [contract, setContract] = useState<Contract | null>(null);
-  const [provider, setProvider] = useState<BrowserProvider | null>(null);
+  const [provider, setProvider] = useState<providers.Web3Provider | null>(null);
   const { toast } = useToast();
 
   // Auto-reconnect on startup
@@ -56,7 +62,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const setupContract = async () => {
       if (provider && isConnected && CONTRACT_ADDRESS) {
         try {
-          const signer = await provider.getSigner();
+          const signer = provider.getSigner();
           const contract = new Contract(
             CONTRACT_ADDRESS,
             AuctionPlatform.abi,
@@ -115,12 +121,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const connectedAddress = accounts[0];
       
       // Create provider
-      const ethersProvider = new BrowserProvider(window.ethereum);
+      const ethersProvider = new providers.Web3Provider(window.ethereum);
       setProvider(ethersProvider);
       
       // Get and set balance
       const bigintBalance = await ethersProvider.getBalance(connectedAddress);
-      const formattedBalance = ethers.formatEther(bigintBalance);
+      const formattedBalance = ethers.utils.formatEther(bigintBalance);
       setBalance(formattedBalance);
       
       // Set wallet state
