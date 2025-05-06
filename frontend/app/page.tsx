@@ -15,7 +15,6 @@ const GET_AUCTIONS = gql`
       id
       auctionId
       itemName
-      imageUrl
       startingBid
       endTimestamp
       creatorAddress
