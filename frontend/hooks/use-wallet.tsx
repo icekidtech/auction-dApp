@@ -22,12 +22,41 @@ const AuctionPlatformABI = [
         "name": "auctionId",
         "type": "uint256"
       },
-      // ... rest of your ABI ...
+      // Other event parameters
     ],
     "name": "AuctionCreated",
     "type": "event"
   },
-  // ... rest of your ABI ...
+  {
+    "inputs": [
+      {"internalType": "string", "name": "itemName", "type": "string"},
+      {"internalType": "string", "name": "itemImageUrl", "type": "string"},
+      {"internalType": "string", "name": "itemDescription", "type": "string"},
+      {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
+      {"internalType": "uint256", "name": "duration", "type": "uint256"}
+    ],
+    "name": "createAuction",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "uint256", "name": "auctionId", "type": "uint256"}],
+    "name": "getAuction",
+    "outputs": [
+      {"internalType": "uint256", "name": "id", "type": "uint256"},
+      {"internalType": "string", "name": "itemName", "type": "string"},
+      {"internalType": "string", "name": "itemImageUrl", "type": "string"},
+      {"internalType": "string", "name": "creatorAddress", "type": "string"},
+      {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
+      {"internalType": "uint256", "name": "currentHighestBid", "type": "uint256"},
+      {"internalType": "string", "name": "highestBidder", "type": "string"},
+      {"internalType": "uint256", "name": "endTimestamp", "type": "uint256"},
+      {"internalType": "bool", "name": "isActive", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ];
 
 declare global {
