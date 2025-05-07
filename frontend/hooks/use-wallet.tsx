@@ -5,61 +5,7 @@ import { ethers, providers, Contract } from "ethers";
 import { useToast } from "@/components/ui/use-toast";
 import ErrorManager from '@/utils/error-manager';
 import { EthereumProvider } from "@walletconnect/ethereum-provider";
-
-// Add this ABI directly in your file
-const AuctionPlatformABI = [
-  {
-    "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "uint256",
-        "name": "auctionId",
-        "type": "uint256"
-      },
-      // Other event parameters
-    ],
-    "name": "AuctionCreated",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {"internalType": "string", "name": "itemName", "type": "string"},
-      {"internalType": "string", "name": "itemImageUrl", "type": "string"},
-      {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
-      {"internalType": "uint256", "name": "duration", "type": "uint256"},
-      {"internalType": "string", "name": "creatorAddress", "type": "string"}
-    ],
-    "name": "createAuction",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [{"internalType": "uint256", "name": "auctionId", "type": "uint256"}],
-    "name": "getAuction",
-    "outputs": [
-      {"internalType": "uint256", "name": "id", "type": "uint256"},
-      {"internalType": "string", "name": "itemName", "type": "string"},
-      {"internalType": "string", "name": "itemImageUrl", "type": "string"},
-      {"internalType": "string", "name": "creatorAddress", "type": "string"},
-      {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
-      {"internalType": "uint256", "name": "currentHighestBid", "type": "uint256"},
-      {"internalType": "string", "name": "highestBidder", "type": "string"},
-      {"internalType": "uint256", "name": "createdTimestamp", "type": "uint256"},
-      {"internalType": "uint256", "name": "endTimestamp", "type": "uint256"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"},
-      {"internalType": "bool", "name": "isCompleted", "type": "bool"}
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
-];
+import { AuctionPlatformABI } from '@/contracts/auction-platform-abi';
 
 declare global {
   interface Window {
