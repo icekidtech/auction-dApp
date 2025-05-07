@@ -23,6 +23,7 @@ interface WalletContextType {
   connect: (walletType?: string) => Promise<void>;
   disconnect: () => void;
   isConnecting: boolean;
+  updateBalance: () => Promise<void>; // Add this line
 }
 
 // Default context state
@@ -35,6 +36,7 @@ const defaultContext: WalletContextType = {
   connect: async () => {},
   disconnect: () => {},
   isConnecting: false,
+  updateBalance: async () => {}, // Add this line
 };
 
 // Create context
@@ -120,8 +122,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     let userAddress: string;
     let ethersProvider: providers.Web3Provider;
     let network: ethers.providers.Network;
-    let bigintBalance: ethers.BigNumber;
-    let formattedBalance: string;
 
     try {
       switch(walletType) {
@@ -143,13 +143,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             ethersProvider = new providers.Web3Provider(wcProvider);
             setProvider(ethersProvider);
             
-            // Get chain ID and balance
+            // Get chain ID
             network = await ethersProvider.getNetwork();
             setChainId(network.chainId);
-            
-            bigintBalance = await ethersProvider.getBalance(userAddress);
-            formattedBalance = ethers.utils.formatEther(bigintBalance);
-            setBalance(formattedBalance);
             
             // Set wallet state
             setAddress(userAddress);
@@ -215,11 +211,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             }
           }
           
-          // Get and set balance
-          bigintBalance = await ethersProvider.getBalance(userAddress);
-          formattedBalance = ethers.utils.formatEther(bigintBalance);
-          setBalance(formattedBalance);
-          
           // Set wallet state
           setAddress(userAddress);
           setIsConnected(true);
@@ -241,6 +232,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         title: "Wallet Connected",
         description: `Connected to ${address?.substring(0,6)}...${address?.substring(address?.length-4) || ""}`
       });
+
+      // Update balance after connection
+      updateBalance();
     } catch (error) {
       console.error("Wallet connection error:", error);
       
@@ -256,6 +250,19 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       setIsConnecting(false);
     }
   }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange, disconnect, CHAIN_ID, address]);
+
+  const updateBalance = useCallback(async () => {
+    if (provider && address && isConnected) {
+      try {
+        const bigintBalance = await provider.getBalance(address);
+        const formattedBalance = ethers.utils.formatEther(bigintBalance);
+        setBalance(formattedBalance);
+        console.log("Balance updated:", formattedBalance);
+      } catch (error) {
+        console.error("Failed to update balance:", error);
+      }
+    }
+  }, [provider, address, isConnected]);
 
   useEffect(() => {
     const savedAddress = localStorage.getItem("zenthra-wallet-address");
@@ -289,6 +296,42 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setupContract();
   }, [provider, isConnected]);
 
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isConnected && provider && address) {
+      // Update balance immediately
+      updateBalance();
+      
+      // Then poll every 15 seconds
+      intervalId = setInterval(updateBalance, 15000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isConnected, provider, address, updateBalance]);
+
+  useEffect(() => {
+    if (contract && provider) {
+      const handleTransactionEvent = () => {
+        console.log("Transaction detected, updating balance");
+        updateBalance();
+      };
+
+      // Listen for events that would affect balance
+      if (provider.provider?.on) {
+        provider.provider.on('block', handleTransactionEvent);
+      }
+
+      return () => {
+        if (provider.provider?.off) {
+          provider.provider.off('block', handleTransactionEvent);
+        }
+      };
+    }
+  }, [contract, provider, updateBalance]);
+
   const value = {
     address,
     isConnected,
@@ -298,6 +341,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     connect,
     disconnect,
     isConnecting,
+    updateBalance, // Add this line
   };
 
   return (

@@ -115,6 +115,12 @@ export default function CreateAuctionPage() {
       await tx.wait();
       console.log("Transaction confirmed");
 
+      // After transaction completes, update the balance
+      const { updateBalance } = useWallet();
+      if (updateBalance) {
+        updateBalance();
+      }
+
       toast({
         title: "Auction created!",
         description: "Your auction has been successfully created",

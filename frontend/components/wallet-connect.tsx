@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/hooks/use-wallet";
-import { Check, ChevronDown, Copy, ExternalLink, LogOut, Wallet } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, LogOut, Wallet, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import { toast } from "@/components/ui/use-toast";
 import ErrorManager from "@/utils/error-manager"; 
 
 export function WalletConnect() {
-  const { address, isConnected, balance, connect, disconnect } = useWallet();
+  const { address, isConnected, balance, connect, disconnect, updateBalance } = useWallet();
   const [copied, setCopied] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -75,7 +75,20 @@ export function WalletConnect() {
           <DropdownMenuSeparator />
           <div className="p-2">
             <p className="text-xs font-medium">Balance</p>
-            <p className="text-sm">{parseFloat(balance).toFixed(4)} LSK</p>
+            <p className="text-sm">
+              {parseFloat(balance).toFixed(4)} LSK
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="ml-2 p-0 h-4"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateBalance && updateBalance();
+                }}
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            </p>
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
