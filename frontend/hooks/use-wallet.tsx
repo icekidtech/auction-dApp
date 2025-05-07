@@ -33,7 +33,6 @@ const AuctionPlatformABI = [
 declare global {
   interface Window {
     ethereum?: any;
-    liskWallet?: any;
   }
 }
 
@@ -81,7 +80,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const handleAccountChange = (accounts: string[]) => {
     if (accounts.length === 0) {
       // User has disconnected their wallet
-      disconnect();
+      handleDisconnect();
     } else {
       // User has switched accounts
       setAddress(accounts[0]);
@@ -96,70 +95,110 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     window.location.reload();
   };
 
+  const handleDisconnect = useCallback(() => {
+    setAddress(null);
+    setIsConnected(false);
+    setBalance("0");
+    setChainId(null);
+    setContract(null);
+    localStorage.removeItem("zenthra-wallet-address");
+    
+    // Remove event listeners if they exist
+    if (window.ethereum) {
+      window.ethereum.removeListener('accountsChanged', handleAccountChange);
+      window.ethereum.removeListener('chainChanged', handleChainChange);
+    }
+    
+    toast({
+      title: "Disconnected",
+      description: "Your wallet has been disconnected"
+    });
+  }, [toast]);
+
+  const disconnect = useCallback(() => {
+    setAddress(null);
+    setIsConnected(false);
+    setBalance("0");
+    setChainId(null);
+    setContract(null);
+    localStorage.removeItem("zenthra-wallet-address");
+    
+    // Remove event listeners if they exist
+    if (window.ethereum) {
+      window.ethereum.removeListener('accountsChanged', handleAccountChange);
+      window.ethereum.removeListener('chainChanged', handleChainChange);
+    }
+    
+    toast({
+      title: "Disconnected",
+      description: "Your wallet has been disconnected"
+    });
+  }, [toast]);
+
   const connect = useCallback(async (walletType?: string) => {
     if (isConnecting || isConnected) return;
     setIsConnecting(true);
     console.log("Starting wallet connection attempt with:", walletType);
     
+    let userAddress: string;
+    let ethersProvider: providers.Web3Provider;
+    let network: ethers.providers.Network;
+    let bigintBalance: ethers.BigNumber;
+    let formattedBalance: string;
+
     try {
       switch(walletType) {
         case "walletconnect":
-          const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
-          
-          if (!walletConnectProjectId) {
-            const errorMessage = "WalletConnect configuration is missing";
+          try {
+            const wcProvider = await EthereumProvider.init({
+              projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID as string,
+              chains: [CHAIN_ID],
+              showQrModal: true,
+              methods: ["eth_sendTransaction", "personal_sign"],
+              events: ["chainChanged", "accountsChanged"],
+            });
+            
+            await wcProvider.enable();
+            const wcAccounts = await wcProvider.request({ method: 'eth_accounts' });
+            userAddress = (wcAccounts as string[])[0];
+            
+            // Create ethers provider from WalletConnect
+            ethersProvider = new providers.Web3Provider(wcProvider);
+            setProvider(ethersProvider);
+            
+            // Get chain ID and balance
+            network = await ethersProvider.getNetwork();
+            setChainId(network.chainId);
+            
+            bigintBalance = await ethersProvider.getBalance(userAddress);
+            formattedBalance = ethers.utils.formatEther(bigintBalance);
+            setBalance(formattedBalance);
+            
+            // Set wallet state
+            setAddress(userAddress);
+            setIsConnected(true);
+            
+            // Save address for auto-reconnect
+            localStorage.setItem("zenthra-wallet-address", userAddress);
+            localStorage.setItem("zenthra-wallet-type", "walletconnect");
+            
+            // Add WalletConnect specific event listeners
+            wcProvider.on("accountsChanged", handleAccountChange);
+            wcProvider.on("chainChanged", handleChainChange);
+            wcProvider.on("disconnect", () => {
+              disconnect();
+            });
+          } catch (error) {
+            console.error("WalletConnect initialization error:", error);
+            const errorMessage = "Failed to initialize WalletConnect";
             if (ErrorManager.shouldShowError(errorMessage)) {
               toast({
                 variant: "destructive",
-                title: "Configuration Error",
+                title: "Connection Failed",
                 description: errorMessage
               });
             }
-            return;
           }
-          
-          // Initialize WalletConnect Provider
-          const wcProvider = await EthereumProvider.init({
-            projectId: walletConnectProjectId,
-            chains: [CHAIN_ID],
-            showQrModal: true,
-            rpcMap: {
-              [CHAIN_ID]: process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.sepolia-api.lisk.com',
-            },
-          });
-          
-          // Connect and get accounts
-          await wcProvider.enable();
-          const accounts = await wcProvider.request({ method: 'eth_accounts' });
-          const userAddress = accounts[0];
-          
-          // Create ethers provider from WalletConnect
-          const ethersProvider = new providers.Web3Provider(wcProvider);
-          setProvider(ethersProvider);
-          
-          // Get chain ID and balance
-          const network = await ethersProvider.getNetwork();
-          setChainId(network.chainId);
-          
-          const bigintBalance = await ethersProvider.getBalance(userAddress);
-          const formattedBalance = ethers.utils.formatEther(bigintBalance);
-          setBalance(formattedBalance);
-          
-          // Set wallet state
-          setAddress(userAddress);
-          setIsConnected(true);
-          
-          // Save address for auto-reconnect
-          localStorage.setItem("zenthra-wallet-address", userAddress);
-          localStorage.setItem("zenthra-wallet-type", "walletconnect");
-          
-          // Add WalletConnect specific event listeners
-          wcProvider.on("accountsChanged", handleAccountChange);
-          wcProvider.on("chainChanged", handleChainChange);
-          wcProvider.on("disconnect", () => {
-            disconnect();
-          });
-          
           break;
           
         case "metamask":
@@ -178,17 +217,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           }
           
           // Existing MetaMask connection logic
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const userAddress = accounts[0];
+          const mmAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          userAddress = mmAccounts[0];
           
-          const ethersProvider = new providers.Web3Provider(window.ethereum);
+          ethersProvider = new providers.Web3Provider(window.ethereum);
           setProvider(ethersProvider);
           
           // Get and set chain ID
-          const network = await ethersProvider.getNetwork();
+          network = await ethersProvider.getNetwork();
           setChainId(network.chainId);
           
-          if (network.chainId !== CHAIN_ID) {
+          if (parseInt(network.chainId.toString()) !== CHAIN_ID) {
             const errorMessage = `Please switch to Lisk chain ID ${CHAIN_ID}`;
             if (ErrorManager.shouldShowError(errorMessage)) {
               toast({
@@ -200,8 +239,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           }
           
           // Get and set balance
-          const bigintBalance = await ethersProvider.getBalance(userAddress);
-          const formattedBalance = ethers.utils.formatEther(bigintBalance);
+          bigintBalance = await ethersProvider.getBalance(userAddress);
+          formattedBalance = ethers.utils.formatEther(bigintBalance);
           setBalance(formattedBalance);
           
           // Set wallet state
@@ -239,33 +278,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsConnecting(false);
     }
-  }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange, disconnect]);
-
-  const connectLiskWallet = async () => {
-    // This would be implemented with the actual Lisk Wallet connection flow
-    // For now returning a mock address
-    return "lsk24cd35u4jdq8szo3pnsqe5dsxwrnazyqqqg5eu";
-  };
-
-  const disconnect = useCallback(() => {
-    setAddress(null);
-    setIsConnected(false);
-    setBalance("0");
-    setChainId(null);
-    setContract(null);
-    localStorage.removeItem("zenthra-wallet-address");
-    
-    // Remove event listeners if they exist
-    if (window.ethereum) {
-      window.ethereum.removeListener('accountsChanged', handleAccountChange);
-      window.ethereum.removeListener('chainChanged', handleChainChange);
-    }
-    
-    toast({
-      title: "Disconnected",
-      description: "Your wallet has been disconnected"
-    });
-  }, [toast]);
+  }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange, disconnect, CHAIN_ID, address]);
 
   useEffect(() => {
     const savedAddress = localStorage.getItem("zenthra-wallet-address");
