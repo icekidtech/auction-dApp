@@ -84,25 +84,36 @@ export default function CreateAuctionPage() {
     setIsSubmitting(true);
     try {
       // Convert values to contract format
-      const startingBid = ethers.utils.parseUnits(values.startingBid, 8); // Fixed this line, 8 decimals for LSK
+      const startingBid = ethers.utils.parseUnits(values.startingBid, 8);
       const durationInHours = parseInt(values.duration);
-      const endTimestamp = Math.floor(Date.now() / 1000) + durationInHours * 60 * 60;
+      const durationInSeconds = durationInHours * 60 * 60;
 
-      // Call contract method to create auction
+      console.log("Creating auction with params:", {
+        itemName: values.itemName,
+        imageUrl: values.imageUrl,
+        startingBid: startingBid.toString(),
+        duration: durationInSeconds,
+        creatorAddress: address
+      });
+
+      // This must match EXACTLY how the function is defined in the contract
       const tx = await contract.createAuction(
         values.itemName,
         values.imageUrl,
         startingBid,
-        endTimestamp
+        durationInSeconds,
+        address // Important! This was missing in your original code
       );
 
+      console.log("Transaction sent:", tx.hash);
+      
       toast({
         title: "Transaction submitted",
         description: "Your auction creation transaction has been sent to the blockchain",
       });
 
-      // Wait for transaction to be mined
       await tx.wait();
+      console.log("Transaction confirmed");
 
       toast({
         title: "Auction created!",

@@ -31,9 +31,9 @@ const AuctionPlatformABI = [
     "inputs": [
       {"internalType": "string", "name": "itemName", "type": "string"},
       {"internalType": "string", "name": "itemImageUrl", "type": "string"},
-      {"internalType": "string", "name": "itemDescription", "type": "string"},
       {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
-      {"internalType": "uint256", "name": "duration", "type": "uint256"}
+      {"internalType": "uint256", "name": "duration", "type": "uint256"},
+      {"internalType": "string", "name": "creatorAddress", "type": "string"}
     ],
     "name": "createAuction",
     "outputs": [],
@@ -51,8 +51,10 @@ const AuctionPlatformABI = [
       {"internalType": "uint256", "name": "startingBid", "type": "uint256"},
       {"internalType": "uint256", "name": "currentHighestBid", "type": "uint256"},
       {"internalType": "string", "name": "highestBidder", "type": "string"},
+      {"internalType": "uint256", "name": "createdTimestamp", "type": "uint256"},
       {"internalType": "uint256", "name": "endTimestamp", "type": "uint256"},
-      {"internalType": "bool", "name": "isActive", "type": "bool"}
+      {"internalType": "bool", "name": "isActive", "type": "bool"},
+      {"internalType": "bool", "name": "isCompleted", "type": "bool"}
     ],
     "stateMutability": "view",
     "type": "function"
