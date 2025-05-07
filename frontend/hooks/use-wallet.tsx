@@ -314,20 +314,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (contract && provider) {
-      const handleTransactionEvent = () => {
-        console.log("Transaction detected, updating balance");
+      const handleBlock = () => {
+        console.log("New block detected, updating balance");
         updateBalance();
       };
 
-      // Listen for events that would affect balance
-      if (provider.provider?.on) {
-        provider.provider.on('block', handleTransactionEvent);
-      }
+      // Use the provider's properly typed event system
+      provider.on('block', handleBlock);
 
       return () => {
-        if (provider.provider?.off) {
-          provider.provider.off('block', handleTransactionEvent);
-        }
+        provider.off('block', handleBlock);
       };
     }
   }, [contract, provider, updateBalance]);
