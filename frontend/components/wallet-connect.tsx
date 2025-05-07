@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
+import ErrorManager from "@/utils/error-manager"; 
 
 export function WalletConnect() {
   const { address, isConnected, balance, connect, disconnect } = useWallet();
@@ -121,14 +122,6 @@ export function WalletConnect() {
           >
             <img src="/metamask.svg" alt="MetaMask" className="w-6 h-6" />
             <span>MetaMask</span>
-          </Button>
-          <Button 
-            onClick={() => handleConnectOption("liskwallet")} 
-            className="flex items-center justify-center gap-2"
-            variant="outline"
-          >
-            <img src="/lisk.svg" alt="Lisk Wallet" className="w-6 h-6" />
-            <span>Lisk Wallet</span>
           </Button>
           <Button 
             onClick={() => handleConnectOption("walletconnect")} 

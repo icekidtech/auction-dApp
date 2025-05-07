@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { ethers, providers, Contract } from "ethers";
 import { useToast } from "@/components/ui/use-toast";
 import ErrorManager from '@/utils/error-manager';
+import { EthereumProvider } from "@walletconnect/ethereum-provider";
 
 // Add this ABI directly in your file
 const AuctionPlatformABI = [
@@ -101,41 +102,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     console.log("Starting wallet connection attempt with:", walletType);
     
     try {
-      // Store already shown errors in this session
-      const shownErrors = new Set();
-      
-      // Handle different wallet types
       switch(walletType) {
-        case "liskwallet":
-          // Connect with Lisk Wallet
-          if (!window.liskWallet) {
-            const errorMessage = "Lisk wallet not detected. Please install Lisk Wallet extension.";
-            if (!shownErrors.has(errorMessage)) {
-              shownErrors.add(errorMessage);
-              toast({
-                variant: "destructive",
-                title: "Lisk Wallet Not Found",
-                description: errorMessage
-              });
-            }
-            return;
-          }
-          
-          // Lisk wallet connect implementation
-          // This would use the LiskAuth implementation
-          // For now, we'll mock this
-          const liskAddress = await connectLiskWallet();
-          setAddress(liskAddress);
-          setIsConnected(true);
-          break;
-          
         case "walletconnect":
-          // Implement WalletConnect
           const walletConnectProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+          
           if (!walletConnectProjectId) {
             const errorMessage = "WalletConnect configuration is missing";
-            if (!shownErrors.has(errorMessage)) {
-              shownErrors.add(errorMessage);
+            if (ErrorManager.shouldShowError(errorMessage)) {
               toast({
                 variant: "destructive",
                 title: "Configuration Error",
@@ -145,17 +118,56 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             return;
           }
           
-          // WalletConnect implementation goes here
-          // For now we'll default to MetaMask as fallback
-          console.log("WalletConnect selected, falling back to MetaMask for now");
+          // Initialize WalletConnect Provider
+          const wcProvider = await EthereumProvider.init({
+            projectId: walletConnectProjectId,
+            chains: [CHAIN_ID],
+            showQrModal: true,
+            rpcMap: {
+              [CHAIN_ID]: process.env.NEXT_PUBLIC_RPC_URL || 'https://rpc.sepolia-api.lisk.com',
+            },
+          });
+          
+          // Connect and get accounts
+          await wcProvider.enable();
+          const accounts = await wcProvider.request({ method: 'eth_accounts' });
+          const userAddress = accounts[0];
+          
+          // Create ethers provider from WalletConnect
+          const ethersProvider = new providers.Web3Provider(wcProvider);
+          setProvider(ethersProvider);
+          
+          // Get chain ID and balance
+          const network = await ethersProvider.getNetwork();
+          setChainId(network.chainId);
+          
+          const bigintBalance = await ethersProvider.getBalance(userAddress);
+          const formattedBalance = ethers.utils.formatEther(bigintBalance);
+          setBalance(formattedBalance);
+          
+          // Set wallet state
+          setAddress(userAddress);
+          setIsConnected(true);
+          
+          // Save address for auto-reconnect
+          localStorage.setItem("zenthra-wallet-address", userAddress);
+          localStorage.setItem("zenthra-wallet-type", "walletconnect");
+          
+          // Add WalletConnect specific event listeners
+          wcProvider.on("accountsChanged", handleAccountChange);
+          wcProvider.on("chainChanged", handleChainChange);
+          wcProvider.on("disconnect", () => {
+            disconnect();
+          });
+          
+          break;
           
         case "metamask":
         default:
           // MetaMask is the default
           if (!window.ethereum) {
             const errorMessage = "Please install MetaMask or another compatible wallet";
-            if (!shownErrors.has(errorMessage)) {
-              shownErrors.add(errorMessage);
+            if (ErrorManager.shouldShowError(errorMessage)) {
               toast({
                 variant: "destructive",
                 title: "No Ethereum Provider",
@@ -165,13 +177,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             return;
           }
           
+          // Existing MetaMask connection logic
           const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
           const userAddress = accounts[0];
           
           const ethersProvider = new providers.Web3Provider(window.ethereum);
           setProvider(ethersProvider);
           
-          // Check we're on the right network
+          // Get and set chain ID
           const network = await ethersProvider.getNetwork();
           setChainId(network.chainId);
           
@@ -195,12 +208,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setAddress(userAddress);
           setIsConnected(true);
           
-          // Save address for auto-reconnect
+          // Save data for auto-reconnect
           localStorage.setItem("zenthra-wallet-address", userAddress);
+          localStorage.setItem("zenthra-wallet-type", "metamask");
           
           // Add event listeners for account and chain changes
           window.ethereum.on('accountsChanged', handleAccountChange);
           window.ethereum.on('chainChanged', handleChainChange);
+          
           break;
       }
       
@@ -213,17 +228,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Wallet connection error:", error);
       
-      // Only show error toast once
       const errorMessage = error instanceof Error ? error.message : "Failed to connect wallet";
-      toast({
-        variant: "destructive",
-        title: "Connection Failed",
-        description: errorMessage
-      });
+      if (ErrorManager.shouldShowError(errorMessage)) {
+        toast({
+          variant: "destructive",
+          title: "Connection Failed",
+          description: errorMessage
+        });
+      }
     } finally {
       setIsConnecting(false);
     }
-  }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange]);
+  }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange, disconnect]);
 
   const connectLiskWallet = async () => {
     // This would be implemented with the actual Lisk Wallet connection flow
