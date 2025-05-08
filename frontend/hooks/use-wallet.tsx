@@ -46,6 +46,9 @@ const WalletContext = createContext<WalletContextType>(defaultContext);
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
 const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "4202");
 
+// In hooks/use-wallet.tsx, add a check for browser environment
+const isBrowser = typeof window !== "undefined";
+
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
@@ -83,7 +86,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("zenthra-wallet-address");
     
     // Remove event listeners if they exist
-    if (window.ethereum) {
+    if (isBrowser && window.ethereum) {
       window.ethereum.removeListener('accountsChanged', handleAccountChange);
       window.ethereum.removeListener('chainChanged', handleChainChange);
     }
@@ -103,7 +106,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("zenthra-wallet-address");
     
     // Remove event listeners if they exist
-    if (window.ethereum) {
+    if (isBrowser && window.ethereum) {
       window.ethereum.removeListener('accountsChanged', handleAccountChange);
       window.ethereum.removeListener('chainChanged', handleChainChange);
     }
@@ -177,7 +180,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         case "metamask":
         default:
           // MetaMask is the default
-          if (!window.ethereum) {
+          if (!(isBrowser && window.ethereum)) {
             const errorMessage = "Please install MetaMask or another compatible wallet";
             if (ErrorManager.shouldShowError(errorMessage)) {
               toast({

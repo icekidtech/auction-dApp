@@ -11,6 +11,7 @@ import { WalletProvider } from "@/hooks/use-wallet";
 import { ApolloProvider } from "@apollo/client";
 import { graphqlClient } from "@/lib/graphql-client";
 import { Toaster } from "@/components/toaster";
+import { ClientWalletProvider } from "@/components/client-wallet-provider";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -30,27 +31,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <title>Zenthra</title>
-        <meta name="description" content="Decentralized auction platform built on the Lisk blockchain" />
-      </head>
-      <body
-        className={cn(
-          "min-h-screen font-sans antialiased",
-          spaceGrotesk.variable,
-          syne.variable
-        )}
-      >
-        <ApolloProvider client={graphqlClient}>
-          <WalletProvider>
-            <div className="flex min-h-screen flex-col">
-              <Navigation />
-              <div className="flex-1">{children}</div>
-            </div>
-            <Toaster />
-          </WalletProvider>
-        </ApolloProvider>
+    <html lang="en">
+      <body>
+        <ClientWalletProvider>
+          {children}
+        </ClientWalletProvider>
       </body>
     </html>
   );
