@@ -5,11 +5,6 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 
-// Create a loading placeholder
-const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
-  return <>{children}</>;
-};
-
 // Dynamically import the WalletProvider with SSR disabled
 const DynamicWalletProvider = dynamic(
   () => import("@/hooks/use-wallet").then((mod) => mod.WalletProvider),
@@ -30,7 +25,7 @@ export function ClientWalletProvider({ children }: { children: React.ReactNode }
     setMounted(true);
   }, []);
 
-  // Only render provider when component is mounted on client
+  // Only render wallet functionality when client-side
   if (!mounted) {
     return <>{children}</>;
   }
