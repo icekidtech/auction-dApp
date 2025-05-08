@@ -1,15 +1,19 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { CountdownTimer } from "@/components/countdown-timer"
-import { BidForm } from "@/components/bid-form"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ExternalLink, Heart, Share2, User } from "lucide-react"
-import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { CountdownTimer } from "@/components/countdown-timer";
+import { BidForm } from "@/components/bid-form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, ExternalLink, Heart, Share2, User } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { useQuery, gql } from "@apollo/client";
+import { useParams } from "next/navigation";
+import { Bid, ProcessedBid } from "@/types/auction";
+import { BidHistory } from "./components/bid-history";
 
 // Mock auction data
 const getAuctionData = (id: string) => {
@@ -70,45 +74,32 @@ const getAuctionData = (id: string) => {
         time: new Date(Date.now() - 26 * 60 * 60 * 1000),
       },
     ],
-  }
-}
-
-function BidHistory({ bids }: { bids: Bid[] }) {
-  if (!bids || bids.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-muted-foreground">No bids have been placed yet</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {bids.map((bid, index) => (
-        <div key={index} className="flex items-center justify-between py-2 border-b border-purple-500/10">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-purple-500/10 p-2">
-              <User className="h-4 w-4 text-purple-500" />
-            </div>
-            <div>
-              <p className="font-medium">
-                {bid.bidder.substring(0, 6)}...{bid.bidder.substring(bid.bidder.length - 4)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {new Date(bid.time).toLocaleString()}
-              </p>
-            </div>
-          </div>
-          <p className="font-semibold">{bid.amount.toFixed(2)} LSK</p>
-        </div>
-      ))}
-    </div>
-  );
-}
+  };
+};
 
 export default function AuctionPage({ params }: { params: { id: string } }) {
-  const auction = getAuctionData(params.id)
-  const [liked, setLiked] = useState(false)
+  const auction = getAuctionData(params.id);
+  const [liked, setLiked] = useState(false);
+
+  // Example GraphQL query and processing
+  const { data } = useQuery(gql`
+    query GetBids($id: String!) {
+      bidPlaceds(auctionId: $id) {
+        id
+        bidderAddress
+        amount
+        timestamp
+      }
+    }
+  `, { variables: { id: params.id } });
+
+  const processedBids: ProcessedBid[] = data?.bidPlaceds?.map((bid: Bid) => ({
+    id: bid.id,
+    bidder: bid.bidderAddress,
+    amount: parseInt(bid.amount) / 1e8,
+    time: new Date(parseInt(bid.timestamp) * 1000),
+    isHighest: false
+  })) || [];
 
   return (
     <main className="min-h-screen pt-8 pb-16">
@@ -227,7 +218,7 @@ export default function AuctionPage({ params }: { params: { id: string } }) {
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="history" className="p-6">
-                  <BidHistory bids={auction.bidHistory} />
+                  <BidHistory bids={processedBids} />
                 </TabsContent>
                 <TabsContent value="details" className="p-6">
                   <div className="space-y-4">
@@ -259,5 +250,5 @@ export default function AuctionPage({ params }: { params: { id: string } }) {
         </div>
       </div>
     </main>
-  )
+  );
 }
