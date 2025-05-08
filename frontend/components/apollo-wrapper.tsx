@@ -25,27 +25,25 @@ const httpLink = new HttpLink({
   }
 });
 
-// Default options with better error handling
-const defaultOptions: DefaultOptions = {
-  watchQuery: {
-    fetchPolicy: 'network-only',
-    errorPolicy: 'all',
-  },
-  query: {
-    fetchPolicy: 'network-only',
-    errorPolicy: 'all',
-  },
-};
+// Fix the variable consistency
+console.log('Apollo client initialized with endpoint:', process.env.NEXT_PUBLIC_SUBGRAPH_URL);
 
-// Configure the Apollo Client
+// Configure the Apollo Client - create it only once!
 const client = new ApolloClient({
   link: from([errorLink, httpLink]),
   cache: new InMemoryCache(),
-  defaultOptions,
+  defaultOptions: {
+    watchQuery: {
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
+    },
+    query: {
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
+    },
+  },
   connectToDevTools: true,
 });
-
-console.log('Apollo client initialized with endpoint:', process.env.NEXT_PUBLIC_GRAPHQL_URL);
 
 export function ApolloWrapper({ children }: { children: React.ReactNode }) {
   return (
