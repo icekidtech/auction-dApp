@@ -68,6 +68,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [contract, setContract] = useState<Contract | null>(null);
   const [provider, setProvider] = useState<providers.Web3Provider | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasAttemptedReconnect, setHasAttemptedReconnect] = useState(false); // Add this line
   const { toast } = useToast();
 
   const handleAccountChange = (accounts: string[]) => {
@@ -281,11 +282,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [provider, address, isConnected]);
 
   useEffect(() => {
-    const savedAddress = localStorage.getItem("zenthra-wallet-address");
-    if (!isConnected && savedAddress) {
-      connect();
+    // Only try to reconnect once when the component mounts
+    if (!hasAttemptedReconnect) {
+      const savedAddress = localStorage.getItem("zenthra-wallet-address");
+      const walletType = localStorage.getItem("zenthra-wallet-type");
+      
+      if (!isConnected && savedAddress) {
+        console.log("Attempting to reconnect saved wallet");
+        setHasAttemptedReconnect(true);
+        connect(walletType || undefined);
+      } else {
+        setHasAttemptedReconnect(true);
+      }
     }
-  }, [isConnected]); // Removed connect from dependencies to prevent multiple calls
+  }, [isConnected, hasAttemptedReconnect]); // Remove connect from dependencies
 
   useEffect(() => {
     const setupContract = async () => {
