@@ -6,6 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, ArrowRight, Package, Gavel, Trophy, History } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { Auction } from "@/types/auction";
+import { useState } from "react";
+
+// At the top of your page.tsx file
+interface Bid {
+  bidderAddress: string;
+  amount: string | number;
+  timestamp: number;
+}
 
 // GraphQL query for dashboard stats
 const GET_USER_STATS = gql`
@@ -29,6 +38,7 @@ const GET_USER_STATS = gql`
 
 export default function DashboardPage() {
   const { address } = useWallet();
+  const [bids, setBids] = useState<Bid[]>([]);
   
   const { data, loading, error } = useQuery(GET_USER_STATS, {
     variables: { address: address || "" },
