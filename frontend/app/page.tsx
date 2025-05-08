@@ -4,9 +4,10 @@ import { useQuery, gql } from "@apollo/client";
 import { AuctionCard } from "@/components/auction-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { ArrowRight, Sparkles, Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { Auction, Bid, ProcessedAuction } from "@/types/auction";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Make sure your query looks something like this:
 const GET_AUCTIONS = gql`
@@ -51,7 +52,7 @@ const GET_ALL_AUCTIONS = gql`
       first: $first
       orderBy: $orderBy
       orderDirection: $orderDirection
-      where: {endTimestamp_gt: ${Math.floor(Date.now() / 1000)}}
+      # No timestamp filter here - get all auctions
     ) {
       id
       auctionId
@@ -64,7 +65,15 @@ const GET_ALL_AUCTIONS = gql`
     }
     bidPlaceds {
       auctionId
+      bidderAddress
       amount
+      timestamp
+    }
+    auctionCompleteds {
+      auctionId
+      winner
+      finalPrice
+      blockTimestamp
     }
   }
 `;
@@ -90,6 +99,8 @@ export default function Home() {
     orderBy: "blockTimestamp",
     orderDirection: "desc"
   });
+
+  const [statusFilter, setStatusFilter] = useState("all"); // "all", "active", or "completed"
   
   // Featured auctions query
   const { 
@@ -167,32 +178,63 @@ export default function Home() {
     });
   };
 
-  // Updated data processing function
+  // Enhanced auction processing function
   const processAuctions = () => {
-    if (!data?.auctionCreateds) return [];
+    if (!auctionsData?.auctionCreateds) return [];
     
-    return data.auctionCreateds.map((auction: any) => {
-      // Get highest bid for this auction
-      const bids = data.bidPlaceds.filter(
-        (bid: any) => bid.auctionId === auction.auctionId
-      );
-      
-      const highestBid = bids.length > 0
-        ? Math.max(...bids.map((bid: any) => parseInt(bid.amount)))
-        : parseInt(auction.startingBid);
-      
-      return {
-        id: auction.auctionId,
-        name: auction.itemName,
-        // Use API route for images instead of direct GraphQL field
-        image: `/api/auction-image/${auction.auctionId}`, 
-        currentBid: highestBid / 1e8, // Assuming 8 decimals for LSK
-        endTime: new Date(parseInt(auction.endTimestamp) * 1000),
-        creatorAddress: auction.creatorAddress,
-      };
-    });
+    const now = Math.floor(Date.now() / 1000);
+    
+    return auctionsData.auctionCreateds
+      .map((auction: any) => {
+        // Get highest bid for this auction
+        const bids = auctionsData.bidPlaceds.filter(
+          (bid: any) => bid.auctionId === auction.auctionId
+        );
+        
+        const highestBid = bids.length > 0
+          ? Math.max(...bids.map((bid: any) => parseInt(bid.amount)))
+          : parseInt(auction.startingBid);
+        
+        // Get all unique bidders
+        const uniqueBidders = [...new Set(bids.map((bid: any) => bid.bidderAddress))];
+        
+        // Check if auction is completed
+        const completed = auctionsData.auctionCompleteds?.find(
+          (completed: any) => completed.auctionId === auction.auctionId
+        );
+        
+        // Is auction active?
+        const isActive = parseInt(auction.endTimestamp) > now && !completed;
+        
+        // Determine winner
+        const winner = completed ? completed.winner : "";
+        
+        return {
+          id: auction.auctionId,
+          name: auction.itemName,
+          image: `/api/auction-image/${auction.auctionId}`,
+          currentBid: highestBid / 1e8, // Assuming 8 decimals for LSK
+          endTime: new Date(parseInt(auction.endTimestamp) * 1000),
+          creatorAddress: auction.creatorAddress,
+          isActive,
+          isCompleted: !!completed,
+          winner,
+          finalPrice: completed ? parseInt(completed.finalPrice) / 1e8 : 0,
+          bidders: uniqueBidders,
+          bidCount: bids.length
+        };
+      })
+      // Apply status filter
+      .filter((auction: any) => {
+        if (statusFilter === "active") return auction.isActive;
+        if (statusFilter === "completed") return auction.isCompleted;
+        return true; // "all"
+      });
   };
-  
+
+  const auctions = processAuctions();
+  const hasAuctions = auctions.length > 0;
+
   // Process featured auctions
   const featuredAuctions = featuredData?.auctionCreateds 
     ? processAuctionData(
@@ -355,62 +397,72 @@ export default function Home() {
       {/* All Auctions */}
       <section id="all" className="py-16 md:py-24 relative">
         <div className="container">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-10 gap-4">
-            <h2 className="font-display text-3xl font-bold">All Auctions</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                variant={sortOrder.orderBy === "blockTimestamp" && sortOrder.orderDirection === "desc" ? "outline" : "ghost"}
-                size="sm"
-                className={sortOrder.orderBy === "blockTimestamp" && sortOrder.orderDirection === "desc" 
-                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
-                  : ""}
-                onClick={() => handleSortChange("blockTimestamp", "desc")}
-              >
-                Latest
-              </Button>
-              <Button 
-                variant={sortOrder.orderBy === "endTimestamp" && sortOrder.orderDirection === "asc" ? "outline" : "ghost"}
-                size="sm"
-                className={sortOrder.orderBy === "endTimestamp" && sortOrder.orderDirection === "asc" 
-                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
-                  : ""}
-                onClick={() => handleSortChange("endTimestamp", "asc")}
-              >
-                Ending Soon
-              </Button>
-              <Button 
-                variant={sortOrder.orderBy === "startingBid" && sortOrder.orderDirection === "desc" ? "outline" : "ghost"}
-                size="sm"
-                className={sortOrder.orderBy === "startingBid" && sortOrder.orderDirection === "desc" 
-                  ? "border-purple-500/20 bg-purple-500/10 text-purple-400" 
-                  : ""}
-                onClick={() => handleSortChange("startingBid", "desc")}
-              >
-                Price: High to Low
-              </Button>
-            </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold tracking-tight">All Auctions</h2>
+            <Button asChild>
+              <Link href="/create">
+                <Plus className="mr-2 h-4 w-4" /> Create Auction
+              </Link>
+            </Button>
           </div>
-
+          
+          <Tabs 
+            defaultValue="all" 
+            className="mb-6"
+            onValueChange={(value) => setStatusFilter(value)}
+          >
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="active">Active</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          
           {auctionsLoading ? (
-            <div className="flex justify-center py-12">
+            <div className="flex justify-center py-20">
               <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
             </div>
-          ) : activeAuctions.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {activeAuctions.map((auction, index) => (
-                <AuctionCard key={auction.id} {...auction} index={index} />
-              ))}
+          ) : !hasAuctions ? (
+            <div className="text-center py-16 border border-dashed rounded-lg">
+              <h3 className="text-lg font-medium mb-2">No auctions found</h3>
+              <p className="text-muted-foreground mb-6">
+                {statusFilter === "all" ? (
+                  "Be the first to create an auction!"
+                ) : statusFilter === "active" ? (
+                  "There are no active auctions at the moment."
+                ) : (
+                  "No completed auctions yet."
+                )}
+              </p>
+              <Button asChild>
+                <Link href="/create">Create Auction</Link>
+              </Button>
             </div>
           ) : (
-            <div className="text-center py-12 border border-dashed border-purple-500/20 rounded-xl bg-background/30">
-              <p className="text-muted-foreground">No active auctions available at the moment.</p>
-              <Button asChild className="mt-4 bg-purple-600 hover:bg-purple-500">
-                <Link href="/create">Create the first auction</Link>
-              </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {auctions.map((auction: any, index: number) => (
+                <div key={auction.id} className="relative">
+                  <AuctionCard {...auction} index={index} />
+                  {auction.isCompleted && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-purple-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+                        Completed
+                      </div>
+                    </div>
+                  )}
+                  {auction.bidCount > 0 && (
+                    <div className="absolute bottom-2 right-2">
+                      <div className="bg-blue-500/80 text-white px-2 py-1 rounded-md text-xs font-medium">
+                        {auction.bidCount} {auction.bidCount === 1 ? "Bid" : "Bids"}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>
       </section>
     </main>
-  )
+  );
 }
