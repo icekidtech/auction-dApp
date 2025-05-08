@@ -1,8 +1,5 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -20,6 +17,7 @@ interface AuctionCardProps {
   isActive?: boolean;
   isCompleted?: boolean;
   winner?: string;
+  bidCount?: number;
 }
 
 export function AuctionCard({
@@ -32,7 +30,8 @@ export function AuctionCard({
   isCompleted = false,
   winner = "",
   creatorAddress,
-  index = 0
+  index = 0,
+  bidCount = 0
 }: AuctionCardProps) {
   const isPast = !isActive;
   const now = new Date();
@@ -55,7 +54,22 @@ export function AuctionCard({
           className="object-cover transition-transform group-hover:scale-105"
           priority={index < 6}
         />
+        
+        {/* Status badges */}
+        <div className="absolute top-2 right-2 flex flex-col gap-2">
+          {isCompleted && (
+            <div className="bg-purple-500 text-white px-2 py-1 rounded-md text-xs font-medium">
+              Completed
+            </div>
+          )}
+          {bidCount > 0 && (
+            <div className="bg-blue-500 bg-opacity-80 text-white px-2 py-1 rounded-md text-xs font-medium">
+              {bidCount} {bidCount === 1 ? "Bid" : "Bids"}
+            </div>
+          )}
+        </div>
       </div>
+      
       <div className="p-4">
         <h3 className="font-medium text-lg line-clamp-1">{name}</h3>
         
@@ -87,7 +101,9 @@ export function AuctionCard({
             <div>
               <p className="text-xs text-muted-foreground mb-1 text-right">Winner</p>
               <p className="text-sm font-medium text-right truncate max-w-[100px]">
-                {winner.substring(0, 6)}...{winner.substring(winner.length - 4)}
+                {winner && winner.length > 10 ? 
+                  `${winner.substring(0, 6)}...${winner.substring(winner.length - 4)}` : 
+                  winner || "No winner"}
               </p>
             </div>
           )}
