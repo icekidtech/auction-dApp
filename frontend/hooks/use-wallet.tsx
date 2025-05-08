@@ -6,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import ErrorManager from '@/utils/error-manager';
 import { AuctionPlatformABI } from '@/contracts/auction-platform-abi';
 
-// At the top of your use-wallet.tsx file
+// Add or update these lines near the top of the file
 const isBrowser = typeof window !== "undefined";
 const isWalletConnectAvailable = isBrowser && typeof HTMLElement !== "undefined";
 
@@ -129,10 +129,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const connect = useCallback(async (walletType?: string) => {
-    if (!isBrowser) {
-      console.log("Cannot connect wallet during server-side rendering");
-      return;
-    }
+    if (!isBrowser) return; // Exit early if not in browser environment
 
     if (isConnecting || isConnected) return;
     setIsConnecting(true);
