@@ -1,21 +1,27 @@
 export interface Auction {
-  id: number;
+  id: string;
+  auctionId: string;
   itemName: string;
   itemImageUrl: string;
   creatorAddress: string;
-  startingBid: string | number;
-  currentHighestBid: string | number;
-  highestBidder: string;
-  createdTimestamp: number;
-  endTimestamp: number;
-  isActive: boolean;
-  isCompleted: boolean;
+  startingBid: string;
+  currentHighestBid?: string;
+  highestBidder?: string;
+  endTimestamp: string;
+  blockTimestamp: string;
+  transactionHash: string;
+  isActive?: boolean;
+  isCompleted?: boolean;
 }
 
 export interface Bid {
+  id: string;
+  auctionId: string;
   bidderAddress: string;
-  amount: string | number;
-  timestamp: number;
+  amount: string;
+  timestamp: string;
+  blockTimestamp: string;
+  transactionHash: string;
 }
 
 export interface AuctionCompleted {
@@ -33,6 +39,17 @@ export interface ProcessedAuction {
   image: string;
   currentBid: number;
   endTime: Date;
-  creatorAddress: string;
-  featured?: boolean;
+  creatorAddress?: string;
+  isActive: boolean;
+  isCompleted: boolean;
+  winner?: string;
+  bidCount?: number;
+}
+
+export interface ProcessedBid {
+  id: string;
+  bidder: string;
+  amount: number;
+  time: Date;
+  isHighest: boolean;
 }
