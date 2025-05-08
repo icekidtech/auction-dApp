@@ -3,15 +3,14 @@
 import type React from "react";
 import { Space_Grotesk, Syne } from "next/font/google";
 import localFont from "next/font/local";
-import "./globals.css";
+import "@/styles/globals.css";
 import { cn } from "@/lib/utils";
-import { ThemeProvider } from "@/components/theme-provider";
-import { Navigation } from "@/components/navigation";
 import { WalletProvider } from "@/hooks/use-wallet";
-import { ApolloProvider } from "@apollo/client";
 import { graphqlClient } from "@/lib/graphql-client";
-import { Toaster } from "@/components/toaster";
 import { ClientWalletProvider } from "@/components/client-wallet-provider";
+import { ApolloWrapper } from "@/components/apollo-wrapper";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/toaster";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -31,11 +30,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
-        <ClientWalletProvider>
-          {children}
-        </ClientWalletProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ApolloWrapper>
+            <ClientWalletProvider>
+              {children}
+              <Toaster />
+            </ClientWalletProvider>
+          </ApolloWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );
