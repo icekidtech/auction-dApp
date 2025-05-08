@@ -4,8 +4,22 @@ import { createContext, useContext, useEffect, useState, ReactNode, useCallback 
 import { ethers, providers, Contract } from "ethers";
 import { useToast } from "@/components/ui/use-toast";
 import ErrorManager from '@/utils/error-manager';
-import { EthereumProvider } from "@walletconnect/ethereum-provider";
 import { AuctionPlatformABI } from '@/contracts/auction-platform-abi';
+
+// At the top of your use-wallet.tsx file
+const isBrowser = typeof window !== "undefined";
+const isWalletConnectAvailable = isBrowser && typeof HTMLElement !== "undefined";
+
+// Before importing WalletConnect
+let EthereumProvider: any;
+if (isWalletConnectAvailable) {
+  // Only import WalletConnect on the client side
+  import("@walletconnect/ethereum-provider").then((module) => {
+    EthereumProvider = module.EthereumProvider;
+  }).catch(err => {
+    console.error("Failed to load WalletConnect:", err);
+  });
+}
 
 declare global {
   interface Window {
@@ -45,9 +59,6 @@ const WalletContext = createContext<WalletContextType>(defaultContext);
 // Contract address from environment variable
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "";
 const CHAIN_ID = parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || "4202");
-
-// In hooks/use-wallet.tsx, add a check for browser environment
-const isBrowser = typeof window !== "undefined";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
