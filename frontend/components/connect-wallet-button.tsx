@@ -7,20 +7,19 @@ import { Loader2, ExternalLink } from "lucide-react";
 
 export function ConnectWalletButton() {
   const { isConnected, isConnecting, address, connect, disconnect } = useWallet();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isDebouncing, setIsDebouncing] = useState(false);
 
-  // Debounced connect function to prevent multiple triggers
   const handleConnect = async () => {
-    if (isProcessing || isConnecting) return;
+    if (isConnecting || isDebouncing) return;
     
-    setIsProcessing(true);
+    setIsDebouncing(true);
     try {
       await connect();
     } finally {
-      // Add a slight delay before allowing another connection attempt
+      // Wait a bit before allowing another click
       setTimeout(() => {
-        setIsProcessing(false);
-      }, 1000);
+        setIsDebouncing(false);
+      }, 2000);
     }
   };
 
@@ -42,9 +41,9 @@ export function ConnectWalletButton() {
   return (
     <Button 
       onClick={handleConnect} 
-      disabled={isProcessing || isConnecting}
+      disabled={isConnecting || isDebouncing}
     >
-      {isProcessing || isConnecting ? (
+      {isConnecting || isDebouncing ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Connecting...
