@@ -6,9 +6,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CountdownTimer } from "@/components/countdown-timer"
 import { BidForm } from "@/components/bid-form"
-import { BidHistory } from "@/components/bid-history"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, ExternalLink, Heart, Share2 } from "lucide-react"
+import { ArrowLeft, ExternalLink, Heart, Share2, User } from "lucide-react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
@@ -72,6 +71,39 @@ const getAuctionData = (id: string) => {
       },
     ],
   }
+}
+
+function BidHistory({ bids }: { bids: Bid[] }) {
+  if (!bids || bids.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No bids have been placed yet</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {bids.map((bid, index) => (
+        <div key={index} className="flex items-center justify-between py-2 border-b border-purple-500/10">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-purple-500/10 p-2">
+              <User className="h-4 w-4 text-purple-500" />
+            </div>
+            <div>
+              <p className="font-medium">
+                {bid.bidder.substring(0, 6)}...{bid.bidder.substring(bid.bidder.length - 4)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {new Date(bid.time).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <p className="font-semibold">{bid.amount.toFixed(2)} LSK</p>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function AuctionPage({ params }: { params: { id: string } }) {
