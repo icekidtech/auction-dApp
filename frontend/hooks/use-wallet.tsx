@@ -129,6 +129,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [toast]);
 
   const connect = useCallback(async (walletType?: string) => {
+    if (!isBrowser) {
+      console.log("Cannot connect wallet during server-side rendering");
+      return;
+    }
+
     if (isConnecting || isConnected) return;
     setIsConnecting(true);
     console.log("Starting wallet connection attempt with:", walletType);
