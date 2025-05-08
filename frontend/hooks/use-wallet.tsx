@@ -264,6 +264,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Wallet connection error:", error);
       
+      // Clean up any event listeners that might have been registered
+      if (window.ethereum) {
+        window.ethereum.removeListener('accountsChanged', handleAccountChange);
+        window.ethereum.removeListener('chainChanged', handleChainChange);
+      }
+      
       const errorMessage = error instanceof Error ? error.message : "Failed to connect wallet";
       if (ErrorManager.shouldShowError(errorMessage)) {
         toast({
