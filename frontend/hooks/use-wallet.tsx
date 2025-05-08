@@ -285,7 +285,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (!isConnected && savedAddress) {
       connect();
     }
-  }, [isConnected, connect]);
+  }, [isConnected]); // Removed connect from dependencies to prevent multiple calls
 
   useEffect(() => {
     const setupContract = async () => {
