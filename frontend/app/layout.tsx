@@ -11,6 +11,7 @@ import { ClientWalletProvider } from "@/components/client-wallet-provider";
 import { ApolloWrapper } from "@/components/apollo-wrapper";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
+import { UIReset } from "@/components/ui-reset";
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -32,6 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <UIReset />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ApolloWrapper>
             <ClientWalletProvider>
