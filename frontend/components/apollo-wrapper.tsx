@@ -19,7 +19,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 
 // Add HTTP link with timeouts
 const httpLink = new HttpLink({
-  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || '',
+  uri: process.env.NEXT_PUBLIC_SUBGRAPH_URL || '',
   fetchOptions: {
     timeout: 30000, // 30 seconds timeout
   }
