@@ -1,3 +1,5 @@
+import webpack from 'webpack';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   eslint: {
@@ -25,7 +27,7 @@ const nextConfig = {
     
     // Add buffer polyfill
     config.plugins.push(
-      new config.webpack.ProvidePlugin({
+      new webpack.ProvidePlugin({
         Buffer: ['buffer', 'Buffer'],
       })
     );

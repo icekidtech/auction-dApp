@@ -19,8 +19,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@blockchain/*": ["blockchain/*"]
+      "@/*": ["./*"]
     },
     "baseUrl": "."
   },
