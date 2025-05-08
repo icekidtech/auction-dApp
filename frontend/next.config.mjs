@@ -16,11 +16,11 @@ const nextConfig = {
       net: false,
       tls: false,
       crypto: false,
-      stream: require.resolve("stream-browserify"),
-      buffer: require.resolve("buffer/"),
-      encoding: false, // new addition
-      path: false,     // new addition
-      url: false,      // new addition
+      stream: false,
+      buffer: false,
+      encoding: false,
+      path: false,
+      url: false,
     };
     
     // Add buffer polyfill
