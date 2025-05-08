@@ -1,9 +1,18 @@
 "use client";
 
-import { Bid } from "@/types/auction";
 import { User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ethers } from "ethers";
+
+// Use correct typing for Bid from the GraphQL response
+interface Bid {
+  id: string;
+  bidderAddress: string;
+  amount: string;
+  timestamp: string;
+  blockTimestamp: string;
+  transactionHash: string;
+}
 
 interface BidHistoryProps {
   bids: Bid[];
@@ -40,31 +49,46 @@ export function BidHistory({ bids, isLoading }: BidHistoryProps) {
     );
   }
   
-  // Sort bids in descending order by amount
+  // Sort bids by amount (highest first)
   const sortedBids = [...bids].sort(
     (a, b) => parseInt(b.amount) - parseInt(a.amount)
   );
+  
+  // Get highest bid for highlighting
+  const highestBidAmount = sortedBids.length > 0 ? sortedBids[0].amount : "0";
 
   return (
     <div className="space-y-4">
-      {sortedBids.map((bid, index) => (
-        <div key={bid.id} className="flex items-center justify-between py-2 border-b border-purple-500/10">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-purple-500/10 p-2">
-              <User className="h-4 w-4 text-purple-500" />
+      {sortedBids.map((bid, index) => {
+        const isHighest = bid.amount === highestBidAmount;
+        const bidAmount = parseFloat(ethers.utils.formatUnits(bid.amount, 8));
+        
+        return (
+          <div key={bid.id} className="flex items-center justify-between py-2 border-b border-purple-500/10">
+            <div className="flex items-center gap-3">
+              <div className={`rounded-full p-2 ${isHighest ? 'bg-green-500/10 text-green-500' : 'bg-purple-500/10 text-purple-500'}`}>
+                <User className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="font-medium">
+                  {bid.bidderAddress.substring(0, 6)}...{bid.bidderAddress.substring(bid.bidderAddress.length - 4)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(parseInt(bid.timestamp) * 1000), { addSuffix: true })}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-medium">
-                {bid.bidderAddress.substring(0, 6)}...{bid.bidderAddress.substring(bid.bidderAddress.length - 4)}
+            <div className="text-right">
+              <p className={`font-semibold ${isHighest ? 'text-green-600 dark:text-green-400' : ''}`}>
+                {bidAmount.toFixed(2)} LSK
               </p>
-              <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(parseInt(bid.timestamp) * 1000), { addSuffix: true })}
-              </p>
+              {isHighest && (
+                <p className="text-xs text-green-600 dark:text-green-400">Highest bid</p>
+              )}
             </div>
           </div>
-          <p className="font-semibold">{ethers.utils.formatUnits(bid.amount, 8)} LSK</p>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
