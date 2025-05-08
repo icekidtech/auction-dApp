@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { TimeRemaining } from "@/components/TimeRemaining";
+import { TimeRemaining } from "@/components/time-remaining";
 
 interface AuctionCardProps {
   id: string;
