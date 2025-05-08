@@ -132,7 +132,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (walletType?: string) => {
     if (!isBrowser) return; // Exit early if not in browser environment
 
-    if (isConnecting || isConnected) return;
+    // Add a more robust check to prevent multiple simultaneous connections
+    if (isConnecting || isConnected) {
+      console.log("Connection already in progress or already connected");
+      return;
+    }
+    
+    // Add connection lock
+    const connectionLock = `connection-in-progress-${Date.now()}`;
+    localStorage.setItem('zenthra-connection-lock', connectionLock);
+    
     setIsConnecting(true);
     console.log("Starting wallet connection attempt with:", walletType);
     
@@ -265,6 +274,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setIsConnecting(false);
+      // Only clear if this was the last connection attempt
+      if (localStorage.getItem('zenthra-connection-lock') === connectionLock) {
+        localStorage.removeItem('zenthra-connection-lock');
+      }
     }
   }, [isConnected, isConnecting, toast, handleAccountChange, handleChainChange, disconnect, CHAIN_ID, address]);
 
