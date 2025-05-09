@@ -22,7 +22,7 @@ const syne = Syne({
 });
 
 const calSans = localFont({
-  src: "../fonts/CalSans-SemiBold.woff2",
+  src: "../public/fonts/CalSans-SemiBold.woff2", // Option 1: Full path
   variable: "--font-cal-sans",
 });
 
