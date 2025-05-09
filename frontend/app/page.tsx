@@ -1,13 +1,14 @@
 "use client";
 
 import { useQuery, gql } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AuctionCard } from "@/components/auction-card";
-import { Loader2, AlertCircle } from "lucide-react";
-import { ProcessedAuction } from "@/types/auction";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Plus, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ProcessedAuction } from "@/types/auction";
 
 // Updated query with fewer filters to ensure data returns
 const GET_ALL_AUCTIONS = gql`
@@ -133,82 +134,79 @@ export default function Home() {
 
   const auctions = processAuctions();
 
-  if (loading && retryCount === 0) {
-    return (
-      <div className="container flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-500 mx-auto mb-4" />
-          <p className="text-lg text-muted-foreground">Loading auctions...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show retry UI after first timeout
-  if (loading && retryCount > 0) {
-    return (
-      <div className="container flex items-center justify-center min-h-[50vh]">
-        <div className="text-center max-w-md">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Still loading...</h2>
-          <p className="text-muted-foreground mb-4">
-            The Lisk auction data is taking longer than expected to load.
-          </p>
-          <Button onClick={() => refetch()}>
-            Retry Now
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="container py-8">
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {error.message || "Failed to load auctions"}
-          </AlertDescription>
-        </Alert>
-        <div className="flex justify-center mt-6">
-          <Button onClick={() => refetch()}>Retry</Button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <main>
-      {/* Hero/welcome section */}
-      <section className="bg-gradient-to-b from-purple-500/5 to-transparent py-16">
-        <div className="container text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">Zenthra</h1>
-          <p className="text-lg mb-8 text-muted-foreground max-w-2xl mx-auto">
-            The decentralized auction platform built on Lisk
-          </p>
-          <Button asChild size="lg">
-            <Link href="/create">Create Auction</Link>
-          </Button>
+      {/* Hero Section */}
+      <section className="py-12 md:py-24 lg:py-32 bg-gradient-to-b from-purple-500/10 to-transparent">
+        <div className="container px-4 md:px-6">
+          <div className="flex flex-col items-center space-y-4 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl lg:text-6xl/none">
+                Zenthra
+              </h1>
+              <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl">
+                The decentralized auction platform built on Lisk
+              </p>
+            </div>
+            <div className="space-x-4">
+              <Button asChild size="lg">
+                <Link href="/create">
+                  <Plus className="mr-2 h-4 w-4" /> Create Auction
+                </Link>
+              </Button>
+              <Button variant="outline" asChild size="lg">
+                <Link href="/dashboard">View Dashboard</Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
-      
-      {/* If no auctions, show empty state */}
-      {auctions.length === 0 ? (
-        <div className="container py-16">
-          <div className="text-center border border-dashed rounded-lg py-16">
-            <h2 className="text-2xl font-semibold mb-2">No auctions yet</h2>
-            <p className="text-muted-foreground mb-8">Be the first to create an auction!</p>
+
+      {/* Auctions Section */}
+      <section className="py-12 container">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-2xl font-bold tracking-tight">Auctions</h2>
+          <Button asChild>
+            <Link href="/create">
+              <Plus className="mr-2 h-4 w-4" /> Create Auction
+            </Link>
+          </Button>
+        </div>
+
+        {/* Filter tabs */}
+        <Tabs defaultValue="all" className="mb-8">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="completed">Completed</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {/* Conditional rendering based on loading/error/empty states */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+          </div>
+        ) : error ? (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error.message || "Failed to load auctions"}
+            </AlertDescription>
+          </Alert>
+        ) : auctions?.length === 0 ? (
+          <div className="text-center py-16 border border-dashed rounded-lg">
+            <h3 className="text-lg font-medium mb-2">No auctions found</h3>
+            <p className="text-muted-foreground mb-6">
+              Be the first to create an auction!
+            </p>
             <Button asChild>
               <Link href="/create">Create Auction</Link>
             </Button>
           </div>
-        </div>
-      ) : (
-        <div className="container py-12">
-          <h2 className="text-2xl font-bold mb-8">Active Auctions</h2>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {auctions.filter(a => a.isActive).map((auction, index) => (
+            {auctions.map((auction, index) => (
               <AuctionCard
                 key={auction.id}
                 {...auction}
@@ -216,8 +214,8 @@ export default function Home() {
               />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </section>
     </main>
   );
 }
